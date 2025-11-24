@@ -36,6 +36,9 @@
     <ClInclude Include="math\color.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="ptr\memory.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ExpandedExpressions\BoundedWhile.cpp">

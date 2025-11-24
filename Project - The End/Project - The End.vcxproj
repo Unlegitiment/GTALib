@@ -20,41 +20,16 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App.h" />
-    <ClInclude Include="Debug\DbgModule.h" />
-    <ClInclude Include="Debug\Debugger.h" />
-    <ClInclude Include="Debug\DebugMgr.h" />
-    <ClInclude Include="Game\GameEntities\Markers.h" />
-    <ClInclude Include="Game\Gamemode\Flow.h" />
-    <ClInclude Include="Game\Gamemode\Gamemode.h" />
-    <ClInclude Include="Game\Gamemode\GamemodeMgr.h" />
-    <ClInclude Include="Game\Gamemode\Textures.h" />
-    <ClInclude Include="Game\Gameplay.h" />
-    <ClInclude Include="Game\Marker\MarkerRet.h" />
-    <ClInclude Include="Game\Marker\MarkerSys.h" />
-    <ClInclude Include="Game\Modes\Freemode.h" />
-    <ClInclude Include="Game\Modes\Freemode\FreemodeMissionLauncher.h" />
-    <ClInclude Include="Game\Modes\Freemode\GameState.h" />
-    <ClInclude Include="Game\Modes\Globals.h" />
-    <ClInclude Include="Game\Modes\SP\Singleplayer.h" />
-    <ClInclude Include="Game\Renderer\Renderer.h" />
-    <ClInclude Include="Game\TempThread\TempThread.h" />
-    <ClInclude Include="Game\TempThread\TempThreadMgr.h" />
     <ClInclude Include="Game\TheEnd.h" />
     <ClInclude Include="Logging\Colors.h" />
     <ClInclude Include="Logging\EndLogger.h" />
     <ClInclude Include="Logging\IOBase.h" />
     <ClInclude Include="Logging\network\CNetworkSocket.h" />
-    <ClInclude Include="Transition\Transition.h" />
-    <ClInclude Include="Transition\TransitionTest.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="App.cpp" />
-    <ClCompile Include="Game\GameEntities\Markers.cpp" />
-    <ClCompile Include="Game\Gamemode\GamemodeMgr.cpp" />
-    <ClCompile Include="Game\Gameplay.cpp" />
     <ClCompile Include="Game\TheEnd.cpp" />
     <ClCompile Include="Logging\network\CNetworkSocket.cpp" />
-    <ClCompile Include="Transition\TransitionTest.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Project - The Game\Project - The Game.vcxproj">
@@ -72,26 +47,26 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>

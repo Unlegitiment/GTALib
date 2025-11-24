@@ -18,7 +18,12 @@ public:
 		hudLogf("Parameter not recognized! %s", typeid(T).name());
 		return *this;
 	}
-	template<> CScaleform& Call<const char*>(const char* data) {
+	// DO NOT CALL THIS! BROKEN!
+	template<typename... Args> [[deprecated("Call<Args&&...> is broken. This will not Call into the Target Scaleform.")]] CScaleform& Call(Args&&... data) {
+		Call((data)...);
+		return *this;
+	}
+	template<>  CScaleform& Call<const char*>(const char* data) {
 		GRAPHICS::SCALEFORM_MOVIE_METHOD_ADD_PARAM_LITERAL_STRING(data);
 		return *this;
 	}

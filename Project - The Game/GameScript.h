@@ -27,6 +27,22 @@ public:
 		sm_Timer = new GameScriptTimer(TIMEOUT_MAX);
 		Scan();
 	}
+	static bool IsScriptActive(const char* name) {
+		for (auto& script : sm_Scripts) {
+			if (script.m_ScriptName == name) {
+				return true;
+			}
+		}
+		return false;
+	}
+	static bool IsScriptActive(int id) {
+		for (auto& script : sm_Scripts) {
+			if (script.m_ScriptId == id) {
+				return true;
+			}
+		}
+		return false;
+	}
 	static void Launch(Script s, int RequestedStackSize) {
 		SCRIPT::REQUEST_SCRIPT(s.m_ScriptName.c_str());
 		auto Bond = BoundedWhile([&]{ return !SCRIPT::HAS_SCRIPT_LOADED(s.m_ScriptName.c_str()); }, MAX_ATT, [&](bool cond, int att)->void {

@@ -15,6 +15,9 @@ void CModification::Init()
 	Logger::Writeln(INIT_BEGIN);
 	GTAV::Init();
 	TheEnd::Init();
+
+
+	this->AddUpdate(TheEnd::Update);
 	this->AddUpdate(GTAV::Update);
 	Logger::Writeln("INIT_OVER");
 }

@@ -66,10 +66,16 @@
     <ClInclude Include="Game\Player\Switch\PlayerSwitch.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Game\World\Interiors\Interior.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GTAVProcess.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Library Include="SHV\ScriptHookV.lib" />
   </ItemGroup>
 </Project>

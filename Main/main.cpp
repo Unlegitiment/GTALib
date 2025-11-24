@@ -17,9 +17,9 @@ BOOL APIENTRY DllMain(HMODULE hInstance, DWORD reason, LPVOID lpReserved)
 		scriptRegister(hInstance, ScriptMain);
 		//scriptRegisterAdditionalThread(hInstance, );
 		keyboardHandlerRegister(OnKeyboardMessage);
-		break;
+		break; 
 	case DLL_PROCESS_DETACH:
-		Logger::Shutdown();
+		Logger::Shutdown(); // God I hate programming here
 		scriptUnregister(hInstance);
 		keyboardHandlerUnregister(OnKeyboardMessage);
 		break;
