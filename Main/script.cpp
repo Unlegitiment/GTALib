@@ -1,12 +1,18 @@
 #include "script.h"
-#include "keyboard.h"
-#include <string>
-#include <ctime>
+#include <Mod/App.h>
+
+#include <ModCore/thirdparty/ScriptHook/include/main.h>
 #pragma warning(disable : 4244 4305) // double <-> float conversions
-#include "../Project - The End/App.h"
+
+
 void main()
 {
-    CModification::Run();
+    legit::Application::Init();
+    while (true) {
+        legit::Application::Update();
+        WAIT(0);
+    }
+    legit::Application::Destroy();
 }
 
 void ScriptMain()

@@ -8,6 +8,5 @@
   <ItemGroup>
     <ClInclude Include="script.h" />
     <ClInclude Include="keyboard.h" />
-    <ClInclude Include="ScriptHookFix.h" />
   </ItemGroup>
 </Project>

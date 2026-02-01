@@ -3,23 +3,22 @@
 				http://dev-c.com			
 			(C) Alexander Blade 2015
 */
-#include "ScriptHookFix.h"
-#include "Project - The Game/SHV/main.h"
+#include <Mod/App.h>
+#include "ModCore/thirdparty/ScriptHook/include/main.h"
 #include "script.h"
 #include "keyboard.h"
-#include "../Project - The End/Logging/EndLogger.h"
 
 BOOL APIENTRY DllMain(HMODULE hInstance, DWORD reason, LPVOID lpReserved)
 {
 	switch (reason)
 	{
 	case DLL_PROCESS_ATTACH:
+		legit::Application::PreInit();
 		scriptRegister(hInstance, ScriptMain);
-		//scriptRegisterAdditionalThread(hInstance, );
 		keyboardHandlerRegister(OnKeyboardMessage);
 		break; 
 	case DLL_PROCESS_DETACH:
-		Logger::Shutdown(); // God I hate programming here
+		legit::Application::PostShut();
 		scriptUnregister(hInstance);
 		keyboardHandlerUnregister(OnKeyboardMessage);
 		break;

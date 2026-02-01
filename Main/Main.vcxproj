@@ -14,17 +14,10 @@
   <ItemGroup>
     <ClInclude Include="keyboard.h" />
     <ClInclude Include="script.h" />
-    <ClInclude Include="ScriptHookFix.h" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Project - The End\Project - The End.vcxproj">
-      <Project>{27181347-7eea-4c5e-911c-7c429899b9bc}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\Project - The Framework\Project - The Framework.vcxproj">
-      <Project>{792a80bd-a127-4adf-9ae8-1fdbbaa9c249}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\Project - The Game\Project - The Game.vcxproj">
-      <Project>{7d09c65e-59ab-4489-b868-3b97f9517bd3}</Project>
+    <ProjectReference Include="..\Mod\Mod.vcxproj">
+      <Project>{18edf52b-d20a-4982-8ad6-c515e7604bb0}</Project>
     </ProjectReference>
   </ItemGroup>
   <PropertyGroup Label="Globals">
@@ -74,7 +67,7 @@
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>"D:\GTAV Scripts\Project - The End\Project - The Game\SHV\ScriptHookV.lib";%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(ProjectDir)..\ModCore\thirdparty\ScriptHook\lib\ScriptHookV.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>copy /Y "$(TargetDir)$(TargetName).asi" "E:\SteamLibrary\steamapps\common\Grand Theft Auto V"</Command>

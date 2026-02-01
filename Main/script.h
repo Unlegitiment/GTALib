@@ -6,10 +6,4 @@
 
 #pragma once
 
-#include "Project - The Game/SHV/natives.h"
-#include "Project - The Game/SHV/types.h"
-#include "Project - The Game/SHV/enums.h"
-
-#include "Project - The Game/SHV/main.h"
-
 void ScriptMain();
