@@ -108,6 +108,7 @@ public:
 		if (isDbg)
 			modInfof("Is Debug: %s\n", isDbg ? "TRUE" : "FALSE");
 	}
+
 	template<typename... T> void Call(const char* Method, T&&... a) {
 		GRAPHICS::BEGIN_SCALEFORM_MOVIE_METHOD(this->ScaleformIndex, Method);
 		(CallOp(std::move(a)), ...);
@@ -116,7 +117,7 @@ public:
 	~ScaleformCall() {
 		ScaleformIndex = 0;
 	}
-private:
+protected:
 	template<typename T> void CallOp(T&& value) {
 		GRAPHICS::SCALEFORM_MOVIE_METHOD_ADD_PARAM_INT((int)value);
 		if (dbg)
@@ -214,11 +215,6 @@ public:
 		m_MainCharacters[0] = sCharacterInfo(CharSelector::FRANKLIN, CharImage::FRANKLIN);
 		m_MainCharacters[1] = sCharacterInfo(CharSelector::MICHAEL, CharImage::MICHAEL);
 		m_MainCharacters[2] = sCharacterInfo(CharSelector::TREVOR, CharImage::TREVOR);
-		//for (int i = 0; i < m_MainCharacters.size(); i++) {
-		//	m_MainCharacters[i].Counter = i + 1;
-		//}
-
-
 		this->m_SelectorMP = sMPInfo();
 		modInfof("Successfully inited.\n");
 	}
@@ -301,8 +297,6 @@ private:
 };
 
 class CPlayerSwitch {
-private:
-
 public:
 	static void Init() { // this is not technically a gtav layer.
 		Selector = new CSelectorController();
@@ -310,7 +304,7 @@ public:
 
 		Selector->GetCharacterInfo(0)->Availability = CharAvailability::AVAILABLE;
 		Selector->GetCharacterInfo(1)->Availability = CharAvailability::AVAILABLE;
-		Selector->GetCharacterInfo(2)->Availability = CharAvailability::AVAILABLE;
+		Selector->GetCharacterInfo(2)->Availability = CharAvailability::AVAILABLE; 
 
 		if (Selector->GetCharacterInfo(0)->Selector == CharSelector::FRANKLIN) {
 			modInfof("Franklin\n");
@@ -334,13 +328,131 @@ public:
 		sMPInfo& info = Selector->GetMultiplayerInfo();
 		info.StatusString = "Hello!";
 	}
+	enum GamePadConstants {
+		DPADUP = 8,
+		DPADDOWN = 9,
+		DPADLEFT = 10,
+		DPADRIGHT = 11,
+		FRONTEND_CONTEXT_BUTTON = 20,
+		FRONTEND_OPTIONS_BUTTON = 21,
+		NO_BUTTON_PRESSED = 9999,
+		LEFTSHOULDER1 = 4,
+		LEFTSHOULDER2 = 5,
+		RIGHTSHOULDER1 = 6,
+		RIGHTSHOULDER2 = 7,
+		START = 12,
+		SELECT = 13,
+		SQUARE = 14,
+		TRIANGLE = 15,
+		CROSS = 16,
+		CIRCLE = 17,
+		LEFTSHOCK = 18,
+		RIGHTSHOCK = 19,
+	};
 	static void Update() {
 		Selector->Update();
+		if (IsKeyJustUp(VK_SUBTRACT)) {
+			if (sm_bIsMenuActive == false) {
+				sm_bIsMenuActive = true;
+				Hash h = MISC::GET_HASH_KEY("FE_MENU_VERSION_SP_PAUSE");
+				HUD::ACTIVATE_FRONTEND_MENU(h, false, 8);
+				modInfof("activating frontend\n");
+			}
+			else {
+				sm_bIsMenuActive = false;
+				modInfof("closing frontend\n");
+				HUD::SET_FRONTEND_ACTIVE(0);
+			}
+		}
+		if (!sm_bIsMenuActive) return;
+		GRAPHICS::BEGIN_SCALEFORM_MOVIE_METHOD_ON_FRONTEND_HEADER("SET_HEADING_DETAILS");
+		GRAPHICS::SCALEFORM_MOVIE_METHOD_ADD_PARAM_LITERAL_STRING("Str1");
+		GRAPHICS::SCALEFORM_MOVIE_METHOD_ADD_PARAM_LITERAL_STRING("Str2");
+		GRAPHICS::SCALEFORM_MOVIE_METHOD_ADD_PARAM_LITERAL_STRING("Str3");
+		GRAPHICS::SCALEFORM_MOVIE_METHOD_ADD_PARAM_BOOL(1); // all this flag does is captialize the first string.
+		GRAPHICS::END_SCALEFORM_MOVIE_METHOD();
+		GRAPHICS::BEGIN_SCALEFORM_MOVIE_METHOD_ON_FRONTEND_HEADER("SET_HEADER_TITLE");
+		GRAPHICS::SCALEFORM_MOVIE_METHOD_ADD_PARAM_LITERAL_STRING("title"); // -- title of game/mission/activity.
+		GRAPHICS::SCALEFORM_MOVIE_METHOD_ADD_PARAM_BOOL(0); // does nothing -- vertified? 
+		GRAPHICS::SCALEFORM_MOVIE_METHOD_ADD_PARAM_LITERAL_STRING("description"); // description.
+		GRAPHICS::SCALEFORM_MOVIE_METHOD_ADD_PARAM_BOOL(0); // is challenge? again does nothing?
+		GRAPHICS::END_SCALEFORM_MOVIE_METHOD();
+		GRAPHICS::BEGIN_SCALEFORM_MOVIE_METHOD_ON_FRONTEND_HEADER("SHIFT_CORONA_DESC");
+		GRAPHICS::SCALEFORM_MOVIE_METHOD_ADD_PARAM_BOOL(1); // bump up to allow for description to show (From SET_HEADER_TITLE)
+		GRAPHICS::SCALEFORM_MOVIE_METHOD_ADD_PARAM_BOOL(1); // Hides the tab markers. 
+		GRAPHICS::END_SCALEFORM_MOVIE_METHOD();
+		GRAPHICS::BEGIN_SCALEFORM_MOVIE_METHOD_ON_FRONTEND_HEADER("SET_MENU_HEADER_TEXT_BY_INDEX");
+		GRAPHICS::SCALEFORM_MOVIE_METHOD_ADD_PARAM_INT(1); // each menu would likely have unique shit here. (index of element does not control page content.)
+		GRAPHICS::SCALEFORM_MOVIE_METHOD_ADD_PARAM_LITERAL_STRING("label"); // what to set the tab value to. 
+		GRAPHICS::SCALEFORM_MOVIE_METHOD_ADD_PARAM_INT(1); // controls the length of the tab (very useful for customly built menus) 
+		GRAPHICS::SCALEFORM_MOVIE_METHOD_ADD_PARAM_INT(1); // controls the capitialization of the "Label" string.
+		GRAPHICS::END_SCALEFORM_MOVIE_METHOD();
+		GRAPHICS::BEGIN_SCALEFORM_MOVIE_METHOD_ON_FRONTEND_HEADER("SET_MENU_ITEM_COLOUR");
+		GRAPHICS::SCALEFORM_MOVIE_METHOD_ADD_PARAM_INT(1); // index again.
+		GRAPHICS::SCALEFORM_MOVIE_METHOD_ADD_PARAM_INT(116); // color enum, hud colors.
+		GRAPHICS::END_SCALEFORM_MOVIE_METHOD();
+		GRAPHICS::BEGIN_SCALEFORM_MOVIE_METHOD_ON_FRONTEND_HEADER("LOCK_MENU_ITEM");
+		GRAPHICS::SCALEFORM_MOVIE_METHOD_ADD_PARAM_INT(2); // index again.
+		GRAPHICS::SCALEFORM_MOVIE_METHOD_ADD_PARAM_INT(1); // locked? this one is weird, does not block viewing of that page, but sets a locked icon next to it and grays it out.
+		GRAPHICS::END_SCALEFORM_MOVIE_METHOD();
+		GRAPHICS::BEGIN_SCALEFORM_MOVIE_METHOD_ON_FRONTEND_HEADER("SET_MENU_ITEM_ALERT");
+		GRAPHICS::SCALEFORM_MOVIE_METHOD_ADD_PARAM_INT(3); // index again.
+		GRAPHICS::SCALEFORM_MOVIE_METHOD_ADD_PARAM_LITERAL_STRING("WARNING STRING"); // rather interesting. likely meant to be combined with SET_MENU_HEADER_TEXT_BY_INDEX, specifically the length of the tab. 
+		GRAPHICS::SCALEFORM_MOVIE_METHOD_ADD_PARAM_INT(116); // not sure what effect this has. in dump its listed as "col" but in game has no effect on SP_PAUSE.
+		GRAPHICS::END_SCALEFORM_MOVIE_METHOD();
+		//GRAPHICS::BEGIN_SCALEFORM_MOVIE_METHOD_ON_FRONTEND_HEADER("SET_ALL_HIGHLIGHTS"); // sets the color for all tabs.
+		//GRAPHICS::SCALEFORM_MOVIE_METHOD_ADD_PARAM_INT(3); // all highlights. likely a bool.
+		//GRAPHICS::SCALEFORM_MOVIE_METHOD_ADD_PARAM_INT(116); // color.
+		//GRAPHICS::END_SCALEFORM_MOVIE_METHOD();
+		//GRAPHICS::BEGIN_SCALEFORM_MOVIE_METHOD_ON_FRONTEND_HEADER("HIGHLIGHT_MENU");
+		//GRAPHICS::SCALEFORM_MOVIE_METHOD_ADD_PARAM_INT(4); // sets the tab highlight to specifically be that one, disregards other inputs.
+		//GRAPHICS::END_SCALEFORM_MOVIE_METHOD();
+
+		//So im still not sure how to access the title?
+		GRAPHICS::BEGIN_SCALEFORM_MOVIE_METHOD_ON_FRONTEND("SET_TITLE");
+		for (int i = 0; i < 10; i++) {
+			GRAPHICS::SCALEFORM_MOVIE_METHOD_ADD_PARAM_INT(i);
+		}
+		GRAPHICS::END_SCALEFORM_MOVIE_METHOD();
+
+
+
+		int colId = 1;
+		GRAPHICS::BEGIN_SCALEFORM_MOVIE_METHOD_ON_FRONTEND("SET_DATA_SLOT");
+		//Specific to the PAGE upon setupColumns, these values are initialized.
+		//In the case of PAUSE_MENU_PAGES_MAP column Id 0 is a "mapLegend" and columnId 1 is freemodeDetails.
+		GRAPHICS::SCALEFORM_MOVIE_METHOD_ADD_PARAM_INT(colId); // columnId 0 -- constant. Is not sent to the data effectively removed from the equation once addDataToView ->GUIView::addItem-> {this.dataList[i] = _dataArray} dataArray being all of the stuff we provide below.
+		//PauseMenuBaseItem::function set data(_d)
+		GRAPHICS::SCALEFORM_MOVIE_METHOD_ADD_PARAM_INT(0); // index 0 -- In FREEMODE_DETAILS this controls the column we are looking at. 
+		GRAPHICS::SCALEFORM_MOVIE_METHOD_ADD_PARAM_INT(0); // menuId 1
+		GRAPHICS::SCALEFORM_MOVIE_METHOD_ADD_PARAM_INT(0); // Unique Id 2 -- Defined By the Item's "function set data(_d)" method tells us which functionality we are looking at. 
+		GRAPHICS::SCALEFORM_MOVIE_METHOD_ADD_PARAM_INT(3); // type 3
+		GRAPHICS::SCALEFORM_MOVIE_METHOD_ADD_PARAM_INT(2); // initialIndex 4
+		GRAPHICS::SCALEFORM_MOVIE_METHOD_ADD_PARAM_INT(0); // isSelectable 5
+		//SLICE(6)
+		// 
+		GRAPHICS::SCALEFORM_MOVIE_METHOD_ADD_PARAM_LITERAL_STRING("Player Beat your Score."); // Text Left 0 
+		//NON-GENERIC TERRITORY FreemodeDetailsItem -- This is controlled by the TYPE parameter up there.
+		GRAPHICS::SCALEFORM_MOVIE_METHOD_ADD_PARAM_LITERAL_STRING("EnderPlayzz"); // PlayerName Right 1 
+		GRAPHICS::SCALEFORM_MOVIE_METHOD_ADD_PARAM_LITERAL_STRING("<*0RSG"); // CrewTag 2 
+		GRAPHICS::SCALEFORM_MOVIE_METHOD_ADD_PARAM_INT(0); // SC Icon Visible
+
+		//NON-GENERIC TERRITORY FreemodeDetailsItem
+		//GRAPHICS::SCALEFORM_MOVIE_METHOD_ADD_PARAM_LITERAL_STRING("Hello2"); // Text Right 1
+		//GRAPHICS::SCALEFORM_MOVIE_METHOD_ADD_PARAM_INT(23); // IconMCTarget 2 -- Found in mp_mission_details_card.ytd -- gametype_icons
+		//GRAPHICS::SCALEFORM_MOVIE_METHOD_ADD_PARAM_INT(112); // HudColor 3
+		//GRAPHICS::SCALEFORM_MOVIE_METHOD_ADD_PARAM_INT(0); // ShowCheck 4
+		GRAPHICS::END_SCALEFORM_MOVIE_METHOD();
+		GRAPHICS::BEGIN_SCALEFORM_MOVIE_METHOD_ON_FRONTEND("DISPLAY_DATA_SLOT");
+		GRAPHICS::SCALEFORM_MOVIE_METHOD_ADD_PARAM_INT(colId); // columnId 0 
+		GRAPHICS::END_SCALEFORM_MOVIE_METHOD();
+
 	}
 	static void Shutdown() {
 		delete Selector;
 	}
 private:
+	static inline bool sm_bIsMenuActive = false;
 	static inline CSelectorController* Selector = nullptr;
 };
 class CMod {

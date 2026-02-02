@@ -36,6 +36,16 @@ public:
 			}
 			iter = SCRIPT::SCRIPT_THREAD_ITERATOR_GET_NEXT_THREAD_ID();
 		}
+		for (auto it = m_Set.begin(); it != m_Set.end(); ) {
+			if (!SCRIPT::IS_THREAD_ACTIVE(*it)) {
+				gtaInfof("Script Terminated by other means(%d)\n", *it);
+				it = m_Set.erase(it);
+			}
+			else {
+				++it;
+			}
+		}
+		
 	}
 	static void KillScript(int thread) {
 		SCRIPT::TERMINATE_THREAD(thread);
