@@ -409,11 +409,7 @@ public:
 		//GRAPHICS::END_SCALEFORM_MOVIE_METHOD();
 
 		//So im still not sure how to access the title?
-		GRAPHICS::BEGIN_SCALEFORM_MOVIE_METHOD_ON_FRONTEND("SET_TITLE");
-		for (int i = 0; i < 10; i++) {
-			GRAPHICS::SCALEFORM_MOVIE_METHOD_ADD_PARAM_INT(i);
-		}
-		GRAPHICS::END_SCALEFORM_MOVIE_METHOD();
+
 
 
 
@@ -442,6 +438,12 @@ public:
 		//GRAPHICS::SCALEFORM_MOVIE_METHOD_ADD_PARAM_INT(23); // IconMCTarget 2 -- Found in mp_mission_details_card.ytd -- gametype_icons
 		//GRAPHICS::SCALEFORM_MOVIE_METHOD_ADD_PARAM_INT(112); // HudColor 3
 		//GRAPHICS::SCALEFORM_MOVIE_METHOD_ADD_PARAM_INT(0); // ShowCheck 4
+		GRAPHICS::END_SCALEFORM_MOVIE_METHOD();
+		GRAPHICS::BEGIN_SCALEFORM_MOVIE_METHOD_ON_FRONTEND("SET_COLUMN_TITLE");
+		GRAPHICS::SCALEFORM_MOVIE_METHOD_ADD_PARAM_INT(colId); // columnId 0 -- constant. Is not sent to the data effectively removed from the equation once addDataToView ->GUIView::addItem-> {this.dataList[i] = _dataArray} dataArray being all of the stuff we provide below.
+		for (int i = 0; i < 10; i++) {
+			GRAPHICS::SCALEFORM_MOVIE_METHOD_ADD_PARAM_INT(i);
+		}
 		GRAPHICS::END_SCALEFORM_MOVIE_METHOD();
 		GRAPHICS::BEGIN_SCALEFORM_MOVIE_METHOD_ON_FRONTEND("DISPLAY_DATA_SLOT");
 		GRAPHICS::SCALEFORM_MOVIE_METHOD_ADD_PARAM_INT(colId); // columnId 0 
