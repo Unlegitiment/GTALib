@@ -24,6 +24,29 @@ public:
 		m_Set.insert(x);
 		return x;
 	}
+	static bool FindScriptWithName(const char* Name, int& Id) {
+		Hash ScriptHash = MISC::GET_HASH_KEY(Name);
+		int iter = 0;
+		SCRIPT::SCRIPT_THREAD_ITERATOR_RESET();
+		iter = SCRIPT::SCRIPT_THREAD_ITERATOR_GET_NEXT_THREAD_ID();
+		while (SCRIPT::IS_THREAD_ACTIVE(iter)) {
+			Hash OtherName = MISC::GET_HASH_KEY(SCRIPT::GET_NAME_OF_SCRIPT_WITH_THIS_ID(iter));
+			if (OtherName == ScriptHash) {
+				Id = iter;
+				return true;
+			}
+			iter = SCRIPT::SCRIPT_THREAD_ITERATOR_GET_NEXT_THREAD_ID();
+		}
+		return false;
+	}
+	static bool IsScriptWithNameRunning(const char* Name) {
+		for (auto& a : m_Set) {
+			if (MISC::GET_HASH_KEY(SCRIPT::GET_NAME_OF_SCRIPT_WITH_THIS_ID(a)) == MISC::GET_HASH_KEY(Name)) {
+				return true;
+			}
+		}
+		return false;
+	}
 	static const std::unordered_set<int>& GetSet() {
 		return m_Set;
 	}
@@ -40,17 +63,15 @@ public:
 			if (!SCRIPT::IS_THREAD_ACTIVE(*it)) {
 				gtaInfof("Script Terminated by other means(%d)\n", *it);
 				it = m_Set.erase(it);
-			}
-			else {
+			} else {
 				++it;
 			}
 		}
-		
 	}
 	static void KillScript(int thread) {
 		SCRIPT::TERMINATE_THREAD(thread);
 		if (m_Set.erase(thread)) {
-			gtaInfof("Killed thread with ID: %d", thread);
+			gtaInfof("Killed thread with ID: %d\n", thread);
 		}
 	}
 	static void TerminateSP() {

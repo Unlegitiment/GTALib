@@ -8,7 +8,7 @@ public:
 		ScriptThreadController::Init();
 
 
-		::Logger::Write("\n");
+		legit::netLogger::Send("\n");
 		gtaInfof("-- GTA End Init  -- \n\n");
 	}
 	static void Update() {

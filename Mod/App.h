@@ -15,13 +15,15 @@ namespace legit {
 			Important stuff responsible for Thread Global stuff. things like the logger mainly, live at this level.
 		*/
         static void PreInit() {
-			Logger::Init();
+			legit::netPlatConfig::InitClass();
+			legit::netLogger::Init();
         }
 
 
         static void PostShut() {
 			appInfof("Goodbye!\n");
-			Logger::Destroy();
+			legit::netLogger::Shutdown();
+			legit::netPlatConfig::ShutdownClass();
         }
 		/*
 			things that use the natives or shv functionality. this runs actually IN the main thread. and separate from the Win32 base code.

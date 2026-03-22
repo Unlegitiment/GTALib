@@ -35,7 +35,7 @@ typedef int ColourIndex;
 typedef int Sphere;
 typedef int ScrHandle;
 
-#pragma pack(push, 1)
+#pragma pack(push, 4)
 typedef struct
 {
 	float x;

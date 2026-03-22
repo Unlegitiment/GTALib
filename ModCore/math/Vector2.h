@@ -40,6 +40,15 @@ namespace legit {
 			value += (this->y * other.y);
 			return value;
 		}
+		Type Distance(const OtherVec& v) {
+			return DistanceSqrt(v);
+		}
+		Type DistanceSqrt(const OtherVec& v) {
+			return sqrt(pow(v.x - this->x, 2) + pow(v.y - this->y, 2));
+		}
+		Type DistanceNoRoot(const OtherVec& v) {
+			return pow(v.x - this->x, 2) + pow(v.y - this->y, 2);
+		}
 	public:
 		Type x, y;
 	};

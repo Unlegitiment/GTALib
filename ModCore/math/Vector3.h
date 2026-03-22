@@ -1,31 +1,34 @@
 #pragma once
-#include <ModCore/thirdparty/ScriptHook/include/types.h>
 namespace legit {
-	template<typename T, T SuitableDefault> class __Vector3 {
+	template<typename T> class __Vector3 {
 	public:
-		using NewVec = __Vector3<T, SuitableDefault>;
+		using NewVec = __Vector3<T>;
 		using Type = T;
-		using OtherVec = __Vector3<T, SuitableDefault>;
+		using OtherVec = __Vector3<T>;
 		__Vector3() {
-			this->x = SuitableDefault;
-			this->y = SuitableDefault;
-			this->z = SuitableDefault;
-		}
-		__Vector3(Vector3 Vector) {
-			this->x = Vector.x;
-			this->y = Vector.y;
-			this->z = Vector.z;
+			this->x = 0;
+			this->y = 0;
+			this->z = 0;
 		}
 		__Vector3(T x, T y, T z) {
 			this->x = x;
 			this->y = y;
 			this->z = z;
 		}
+		T Distance(const OtherVec& v) {
+			return DistanceSqrt(v);
+		}
+		T DistanceSqrt(const OtherVec& v) {
+			return sqrt(pow(v.x - this->x, 2) + pow(v.y - this->y, 2) + pow(v.z - this->z, 2));
+		}
+		T DistanceNoRoot(const OtherVec& v) {
+			return pow(v.x - this->x, 2) + pow(v.y - this->y, 2) + pow(v.z - this->z, 2);
+		}
 		NewVec Add(const OtherVec& other) {
 			T x = this->x + other.x;
 			T y = this->y + other.y;
 			T z = this->z + other.z;
-			return {x,y,};
+			return {x,y,z};
 		}
 		NewVec Subtract(const OtherVec& other) {
 			T x = this->x - other.x;
@@ -52,9 +55,19 @@ namespace legit {
 			value += (this->z * other.z);
 			return value;
 		}
+		bool operator==(const OtherVec& other) {
+			return this->x == other.x || this->y == other.y || this->z == other.z;
+		}
+		bool operator!=(const OtherVec& other) {
+			return this->x != other.x || this->y != other.y || this->z != other.z;
+		}
+		friend std::ostream& operator<<(std::ostream& os, const __Vector3<T>& v) {
+			os << "{ " << v.x << ", " << v.y << ", " << v.z << " }";
+			return os;
+		}
 	public:
 		Type x, y, z;
 	};
-	using Vec3f = __Vector3<float, 0.0f>;
-	using Vec3i = __Vector3<int, 0>;
+	using Vec3f = __Vector3<float>;
+	using Vec3i = __Vector3<int>;
 }
