@@ -27,9 +27,11 @@
     <ClInclude Include="GTAV.h" />
     <ClInclude Include="log.h" />
     <ClInclude Include="scriptmanagement\scriptctrl.h" />
+    <ClInclude Include="ui\HudMgr.h" />
     <ClInclude Include="ui\rect\base.h" />
     <ClInclude Include="ui\rect\immediate.h" />
     <ClInclude Include="ui\rect\rect_s.h" />
+    <ClInclude Include="world\world.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GTAV.cpp" />

@@ -15,7 +15,33 @@
 #include <string>
 #include <array>
 #include <typeinfo>
-
+namespace rage {
+	class HashString {
+	public:
+		static constexpr size_t MaxLen = 256;
+		HashString() = default;
+		HashString(const char* Source) {
+			m_String = Source;
+			m_Hash = MISC::GET_HASH_KEY(m_String.c_str());
+		}
+		Hash ToHash() const {
+			return m_Hash; // is this slow? yes. would it be quicker to just steal some hash impl from some other mod, yes. fuck you.
+		}
+		const char* GetString() const {
+			return m_String.c_str(); // DON'T YOU DARE TOUCH MAH SPAGHET!
+		}
+		~HashString() {
+		}
+	private:
+		std::string m_String;
+		Hash m_Hash = NULL;
+	};
+	template<typename T>
+	static void Clamp(T& Value, const T& Minimum, const T& Maximum) {
+		if (Value > Maximum) Value = Maximum;
+		if (Value < Minimum) Value = Minimum;
+	}
+}
 
 class PlayerSwitchScaleform {
 public:
@@ -1202,13 +1228,16 @@ public:
 		return true;
 	}
 	bool IsDead() const {
-		return PED::IS_PED_DEAD_OR_DYING(m_PlayerPedId, 0);
+		return !PLAYER::IS_PLAYER_PLAYING(m_PlayerNetId) && PLAYER::IS_PLAYER_DEAD(m_PlayerNetId);
 	}
 	void Kill() const {
 		ENTITY::SET_ENTITY_HEALTH(m_PlayerPedId, 0, 0, 0);
 	}
 	void Resurrect(legit::Vec3f Position, float fHeading, int iInvulnerabilityTime) {
-		NETWORK::NETWORK_RESURRECT_LOCAL_PLAYER(legit::Promote(Position), fHeading, iInvulnerabilityTime, 0, 1, 6, -1);
+		NETWORK::NETWORK_RESURRECT_LOCAL_PLAYER(legit::Promote(Position), fHeading, iInvulnerabilityTime, 0, 1, -1, -1);
+	}
+	void Resurrect(legit::Vec3f Position, float fHeading, int iInvulnerabilityTime, int SpawnLocation, int SpawnReason) {
+		NETWORK::NETWORK_RESURRECT_LOCAL_PLAYER(legit::Promote(Position), fHeading, iInvulnerabilityTime, 0, 1, SpawnLocation, SpawnReason);
 	}
 	~gtaPlayer() {
 
@@ -1248,23 +1277,34 @@ namespace legit {
 		static void CylinderDebug(legit::Vec3f Start, float fRadi, legit::Colorf Col) {
 			GRAPHICS::DRAW_MARKER(1, Promote(Start), Promote(legit::Vec3f{0,0,0}), Promote(legit::Vec3f{0,0,0}), Promote(legit::Vec3f{fRadi*2, fRadi*2, 9999}), Col.r, Col.g, Col.b, Col.a, 0, 0, 0, 0, 0, 0, 0);
 		}
+		static void CylinderDebug(legit::Vec3f Start, legit::Vec3f Scale, legit::Colorf Col) {
+			GRAPHICS::DRAW_MARKER(1, Promote(Start), Promote(legit::Vec3f{0,0,0}), Promote(legit::Vec3f{0,0,0}), Promote(Scale), Col.r, Col.g, Col.b, Col.a, 0, 0, 0, 0, 0, 0, 0);
+		}
 	}
 }
 class ModScriptHandler : public ScriptThreadController{
 public:
 	static void TerminateSP() {
-		SCRIPT::SCRIPT_THREAD_ITERATOR_RESET();
-		int thread = SCRIPT::SCRIPT_THREAD_ITERATOR_GET_NEXT_THREAD_ID();
-		Hash h = SCRIPT::GET_HASH_OF_THIS_SCRIPT_NAME();
-		while (SCRIPT::IS_THREAD_ACTIVE(thread)) {
-			if (h != MISC::GET_HASH_KEY(SCRIPT::GET_NAME_OF_SCRIPT_WITH_THIS_ID(thread))) {
-				gtaInfof("Script killing thread with name: %s\n", SCRIPT::GET_NAME_OF_SCRIPT_WITH_THIS_ID(thread));
-				SCRIPT::TERMINATE_THREAD(thread);
-			} else {
-				gtaInfof("Skipping thread with ID %d, it is either our Script or another mod.\n", thread);
+		PLAYER::FORCE_CLEANUP(2);
+		WAIT(0); // DO ONE TICK!
+		//if(1){
+			SCRIPT::SCRIPT_THREAD_ITERATOR_RESET();
+			int thread = SCRIPT::SCRIPT_THREAD_ITERATOR_GET_NEXT_THREAD_ID();
+			Hash h = SCRIPT::GET_HASH_OF_THIS_SCRIPT_NAME();
+			for (; SCRIPT::IS_THREAD_ACTIVE(thread); thread = SCRIPT::SCRIPT_THREAD_ITERATOR_GET_NEXT_THREAD_ID()) {
+				rage::HashString CurScript = rage::HashString(SCRIPT::GET_NAME_OF_SCRIPT_WITH_THIS_ID(thread));
+				if (h != CurScript.ToHash()) {
+					if (CurScript.ToHash() == rage::HashString("main_persistent").ToHash()) {
+						modInfof("Skipping a potential ScriptHookV important thread.\n");
+						continue;
+					}
+					gtaInfof("Script killing thread with name: %s\n", CurScript.GetString());
+					SCRIPT::TERMINATE_THREAD(thread);
+				} else {
+					gtaInfof("Skipping thread with ID %d, it is either our Script or another mod.\n", thread);
+				}
 			}
-			thread = SCRIPT::SCRIPT_THREAD_ITERATOR_GET_NEXT_THREAD_ID(); // im not sure if this has an issue. I don't think it would, would be cleaner too.
-		}
+		//}
 		BRAIN::DISABLE_SCRIPT_BRAIN_SET(0);
 		BRAIN::DISABLE_SCRIPT_BRAIN_SET(1);
 		BRAIN::DISABLE_SCRIPT_BRAIN_SET(2);
@@ -1278,8 +1318,253 @@ public:
 		SCRIPT::BG_END_CONTEXT("GLOBAL");
 	}
 private:
+};
+#define NO_COPY(T) T& operator=(const T&) = delete; T(const T&) = delete;
+/*
+	There is multiple methods that are generally synonmous with GTA Live Resources, such as Entities, Blips, etc. Despite how much I want RAII the model does not support it.
+*/
+class CBlip {
+public:
+	CBlip() = default;
+	CBlip(legit::Vec3f Position) {
+		Create(Position);
+	}
+	CBlip(int otherHandle) {
+		this->m_iBlip = otherHandle;
+	}
+	void Create(legit::Vec3f Position) { // necessary for if a blip cannot be instantly created for whatever reason.
+		m_iBlip = HUD::ADD_BLIP_FOR_COORD(legit::Promote(Position));
+	}
+	//Simply far too many steps required to copy and the state is too variable. Unless I wanted to replicate the entire state of a blip inside this class. But even then outside sources could change the blip. (like other scripts and such) 
+	NO_COPY(CBlip);
+	CBlip(CBlip&& b) noexcept : m_iBlip(b.m_iBlip), m_Name(b.m_Name){
+		b.m_iBlip = 0;
+		b.m_Name.clear();
+	}
+	CBlip& operator=(CBlip&& b) noexcept {
+		if (this->m_iBlip) {
+			HUD::REMOVE_BLIP(m_iBlip);
+		}
+		this->m_iBlip = b.m_iBlip;
+		this->m_Name = b.m_Name;
+		b.m_iBlip = 0;
+		b.m_Name.clear();
+		return *this;
+	}
+	void SetBlipName(const char* Name) {
+		this->m_Name = Name;
+		SetBlipNameRaw(m_Name.c_str());
+	}
+	void SetBlipName(std::string Name) {
+		this->m_Name = Name;
+		SetBlipNameRaw(m_Name.c_str());
+	}
+	void SetSprite(int Sprite, bool KeepName = true) {
+		HUD::SET_BLIP_SPRITE(m_iBlip, Sprite);
+		if (KeepName) {
+			SetBlipNameRaw(m_Name.c_str());
+		}
+	}
+	void SetBlipScale(float fScale) {
+		HUD::SET_BLIP_SCALE(m_iBlip, fScale);
+	}
+	void SetBlipAsRoute(bool bEnable) {
+		HUD::SET_BLIP_ROUTE(m_iBlip, bEnable);
+	}
+	void SetRouteColor(int Color) {
+		HUD::SET_BLIP_ROUTE_COLOUR(m_iBlip, Color);
+	}
+	void SetSpriteColor(int ColorId) {
+		HUD::SET_BLIP_COLOUR(m_iBlip, ColorId);
+	}
+	int GetSpriteColor() const {
+		return HUD::GET_BLIP_COLOUR(m_iBlip);
+	}
+	bool DoesExist() const {
+		return HUD::DOES_BLIP_EXIST(m_iBlip);
+	}
+	Blip GetHandle() const {
+		return this->m_iBlip;
+	}
+	void Remove() {
+		if (m_iBlip) {
+			HUD::REMOVE_BLIP(m_iBlip);
+		}
+	}
+	~CBlip() {
+		Remove();
+	}
+protected:
+	void SetBlipNameRaw(const char* Name) {
+		HUD::BEGIN_TEXT_COMMAND_SET_BLIP_NAME("STRING");
+		HUD::ADD_TEXT_COMPONENT_SUBSTRING_PLAYER_NAME(Name);
+		HUD::END_TEXT_COMMAND_SET_BLIP_NAME(m_iBlip);
+	}
+private:
+	Blip m_iBlip = 0;
+	std::string m_Name;
+};
+class gtaResourceHandler {
+public:
+	static constexpr Entity NULL_HANDLE = 0;
+	gtaResourceHandler() = default;
+	gtaResourceHandler(Entity& iEnt) : m_EntityHandle(iEnt) { iEnt = 0; };
+	gtaResourceHandler(gtaResourceHandler&& obj) : m_EntityHandle(obj.m_EntityHandle) {
+		obj.m_EntityHandle = NULL_HANDLE;
+	}
+	NO_COPY(gtaResourceHandler);
+	virtual ~gtaResourceHandler() = default;
+	gtaResourceHandler& operator=(gtaResourceHandler&& obj) {
+		if (this != &obj) {
+			if (this->IsHandlingAResource()) {
+				this->Delete();
+			}
+			m_EntityHandle = obj.m_EntityHandle;
+			obj.m_EntityHandle = NULL_HANDLE;
+		}
+		return *this;
+	}
+	Entity GetHandle() const {
+		return this->m_EntityHandle;
+	}
+	void Delete() {
+		if (this->IsHandlingAResource()) {
+			this->DeleteInternal();
+			this->m_EntityHandle = NULL_HANDLE;
+		}
+	}
+	bool IsHandlingAResource() const {
+		return this->m_EntityHandle != NULL_HANDLE;
+	}
+protected:
+	/*
+		Allows for diversification on how the process should be handled, but does not conflate the knowledge of the live resource with m_EntityHandle's scope.
+	*/
+	virtual void DeleteInternal() = 0;
+	gtaResourceHandler(const Entity& ent) : m_EntityHandle(ent){}
+private:
+	Entity m_EntityHandle = NULL_HANDLE; // this is much more of a convenience is it worth it?
 
 };
+class CEntity : public gtaResourceHandler{
+public:
+	CEntity() = default;
+	explicit CEntity(Entity& Handle) : gtaResourceHandler(Handle){}
+	CEntity(CEntity&&) = default;
+	CEntity& operator=(CEntity&&) = default;
+protected:
+	CEntity(const Entity& Handle) : gtaResourceHandler(Handle) { // Specifically to resource creation.
+	
+	};
+public:
+	void SetAlpha(float fAlpha, bool bAffectSkin) {
+		rage::Clamp(fAlpha, 0.f, 1.f);
+		ENTITY::SET_ENTITY_ALPHA(this->GetHandle(), fAlpha * 255l, bAffectSkin);
+	}
+	void ResetAlpha() {
+		ENTITY::RESET_ENTITY_ALPHA(this->GetHandle());
+	}
+	void SetPosition(legit::Vec3f Pos, bool bAlive, bool bDeadFlag, bool bRagDollFlag, bool bClearArea) {
+		ENTITY::SET_ENTITY_COORDS(this->GetHandle(), legit::Promote(Pos), bAlive, bDeadFlag, bRagDollFlag, bClearArea);
+	}
+	legit::Vec3f GetPosition(bool bAlive) {
+		return legit::Demote(ENTITY::GET_ENTITY_COORDS(this->GetHandle(), bAlive));
+	}
+	bool IsAnEntity() const {
+		return ENTITY::IS_AN_ENTITY(this->GetHandle());
+	}
+	bool IsAMissionEntity() const {
+		return ENTITY::IS_ENTITY_A_MISSION_ENTITY(this->GetHandle());
+	}
+	bool IsAPed() const {
+		return ENTITY::IS_ENTITY_A_PED(this->GetHandle());
+	}
+	bool IsAnObject() const {
+		return ENTITY::IS_ENTITY_AN_OBJECT(this->GetHandle());
+	}
+	bool IsAVehicle() const {
+		return ENTITY::IS_ENTITY_A_VEHICLE(this->GetHandle());
+	}
+	bool IsDead(bool bUnk) const {
+		return ENTITY::IS_ENTITY_DEAD(this->GetHandle(), bUnk);
+	}
+	bool DoesExist() const {
+		return ENTITY::DOES_ENTITY_EXIST(this->GetHandle());
+	}
+	// Verbs. Makes it clearer on intention.
+	void Freeze() const {
+		ENTITY::FREEZE_ENTITY_POSITION(this->GetHandle(), true);
+	}
+	void Unfreeze() const {
+		ENTITY::FREEZE_ENTITY_POSITION(this->GetHandle(), false);
+	}
+	void SetLODDistance(int iDistance) const {
+		ENTITY::SET_ENTITY_LOD_DIST(this->GetHandle(), iDistance);
+	}
+	virtual void SetAsNoLongerNeeded() const {
+		int _newHandle = GetHandle();
+		ENTITY::SET_ENTITY_AS_NO_LONGER_NEEDED(_newHandle);
+	}
+	virtual ~CEntity() = default;
+protected:
+	virtual void DeleteInternal() {
+		int _newHandle = (this->GetHandle());
+		ENTITY::DELETE_ENTITY(_newHandle);
+	}
+private:
+
+};
+class CObject : public CEntity{
+public:
+	CObject() = default;
+	CObject(const rage::HashString& mHash, legit::Vec3f Position, bool IsNet, bool isScriptHostObj, bool isDynamic) : CEntity(OBJECT::CREATE_OBJECT(mHash.ToHash(), legit::Promote(Position), IsNet, isScriptHostObj, isDynamic))
+	{ }
+	CObject(CObject&&) = default;
+	CObject& operator=(CObject&&) = default;
+	~CObject() {}
+	void SetAsNoLongerNeeded() {
+		int _newHandle = this->GetHandle();
+		ENTITY::SET_OBJECT_AS_NO_LONGER_NEEDED(_newHandle); // useless.
+	}
+protected:
+	void DeleteInternal() override {
+		int iHandle = (this->GetHandle());
+		OBJECT::DELETE_OBJECT(iHandle); // since I already handle it, this functions reference is irrelevent.
+	}
+private:
+};
+class CSynchronizedScene {
+public:
+	CSynchronizedScene() = default;
+	CSynchronizedScene(legit::Vec3f Position, legit::Vec3f RotationProperties, const char* szAnimDictionary) {
+		m_iSceneHandle = PED::CREATE_SYNCHRONIZED_SCENE(legit::Promote(Position), RotationProperties.x, RotationProperties.y, RotationProperties.z, 1);
+		m_strAnimDictionary = szAnimDictionary;
+	}
+	/*
+		Returns: Whether the anim has loaded.ea
+	*/
+	bool LoadResource() {
+		STREAMING::REQUEST_ANIM_DICT(m_strAnimDictionary.c_str());
+		return STREAMING::HAS_ANIM_DICT_LOADED(m_strAnimDictionary.c_str());
+	}
+	void RegisterPedForScene(Ped iPed, const char* szAnimName) {
+		TASK::TASK_SYNCHRONIZED_SCENE(iPed, m_iSceneHandle, m_strAnimDictionary.c_str(), szAnimName, 1000.f, -8.f, 4, 0, 0x447a0000, 0); // idk what the fuck those flags are bruh.
+	}
+	float GetSceneProgression() const {
+		return PED::GET_SYNCHRONIZED_SCENE_PHASE(m_iSceneHandle);
+	}
+	bool IsSceneDone() const {
+		return GetSceneProgression() >= 1.0f;
+	}
+	bool IsSceneRunning() const {
+		return PED::IS_SYNCHRONIZED_SCENE_RUNNING(m_iSceneHandle);
+	}
+private:
+	int m_iSceneHandle = 0;
+	bool m_bIsSceneRunning = false;
+	std::string m_strAnimDictionary;
+};
+#define MAKE_STR(X) #X
 class CEndIntro {
 private:
 	bool m_bIsActivityDisturbed = false;
@@ -1308,6 +1593,9 @@ public:
 			VEHICLE::DELETE_VEHICLE(m_iDeluxo);
 		}
 	}
+	bool WasCheatEntered(rage::HashString a) {
+		return MISC::HAS_PC_CHEAT_WITH_HASH_BEEN_ACTIVATED(a.ToHash());
+	}
 	/*
 		For persistent state I need to run the PauseMenu Hijack stuff because the Traffic Stuff is gone.
 	*/
@@ -1318,6 +1606,7 @@ public:
 			CAM::DO_SCREEN_FADE_IN(0);
 			HUD::DISPLAY_HUD(true);
 			HUD::DISPLAY_RADAR(true);
+			MISC::FORCE_GAME_STATE_PLAYING(); // LAST RESORT!
 			PLAYER::RESET_PLAYER_ARREST_STATE(gtaPlayerMgr::GetPlayer()->GetNetHandle());
 			SCRIPT::SHUTDOWN_LOADING_SCREEN();
 		}
@@ -1327,13 +1616,21 @@ public:
 			}
 		}
 		HandleVehicleSection();
-		if (MISC::HAS_PC_CHEAT_WITH_HASH_BEEN_ACTIVATED(MISC::GET_HASH_KEY("deathtest"))) {
+		if (WasCheatEntered("deathtest")) {
 			PerformDeathTest();
+		}
+		if (WasCheatEntered("fadeout")) {
+			CAM::DO_SCREEN_FADE_OUT(2000);
+		} 
+		if (WasCheatEntered("fadein")) {
+			CAM::DO_SCREEN_FADE_IN(2000);
 		}
 	}
 	void PerformDeathTest() {
 		m_pLocalPlayer->Kill();
-		OverrideDeathHandler();
+		OverrideDeathHandler(this);
+		//MISC::FORCE_GAME_STATE_PLAYING(); // THIS IS REQUIRED TO OVERLOAD THE DEATH STATE. FOR MORE LONGER DRAWN OUT EFFECTS, RESEARCH IS NEEDED!
+		// The alternatives are IGNORE_NEXT_RESTART(true), PAUSE_DEATH_ARREST_RESTART(false), Then control the Fade Values. Via their own MISC:: natives.
 	}
 	bool IsWithinDistanceCheck() {
 		return StripHeight(m_pLocalPlayer->GetPosition()).DistanceNoRoot(StripHeight(m_MissionStartPosition)) < (STARTER_DISTANCE_CHECK * STARTER_DISTANCE_CHECK);
@@ -1355,36 +1652,40 @@ public:
 		Returns. Whether the death is handled or needs more time to update. 
 		Input Parameters, whatever is required to handle the death packed into one pointer. 
 	*/
-
-	/*
-		BUG! Strange Hud effects take place if the player is not killed normally, and handled by the standard death controller. 
-		Not sure why, but it seems to be an after effect of Respawn Controller, even if we Terminate the controller early. 
-		Because of this, Terminating SP becomes the only way to actually control the Player's Respawn effectively. 
-		It was likely to come to this anyways because I was just trying to minimize the issues with Terminating it (as seen in the shop_controller mention in HandleVehicleSection)
-		But, rip SP. Just too annoying to work around. After this however I need to add someway to get BACK to sp even if its just relaunching initial or startup or something.
-		(The problem with relaunching initial or startup is that it causes a complete reload. It fixes SOME things but the game needs a proper restart 
-		or a loading screen in order to get back to the normal state. The issue is that main.ysc controls everything relevant to the Scripts so hypothesis time, 
-		when freemode.ysc terminates its calls a function in main.ysc  that probably triggers the transition back to Singleplayer and that state already exists. 
-		My existing one is way more crude and requires basically a full restart before it can be normal again (or a mission replay it seems could also work.)
-	*/
-	void OverrideDeathHandler() {
+	static bool OverrideDeathHandler(void* arg) {
+		CEndIntro* Arg = (CEndIntro*)arg;
+		MISC::IGNORE_NEXT_RESTART(true);
+		MISC::PAUSE_DEATH_ARREST_RESTART(false);
+		MISC::SET_FADE_OUT_AFTER_DEATH(false);
+		MISC::SET_FADE_IN_AFTER_DEATH_ARREST(false);
+		WAIT(0); // this is required here. - The reason is that we need a 1 tick hold so that the game has time to Update and Ignore the future death/restart. Then we actually trigger the restart handling code. 
+		if (Arg->m_pLocalPlayer->IsDead()) {
+			MISC::CLEAR_RESTART_COORD_OVERRIDE();
+			modInfof("Attempting required launch.\n");
+		}
 		int Id = 0;
 		if (ScriptThreadController::FindScriptWithName("respawn_controller", Id)) {
 			ScriptThreadController::KillScript(Id);
 			modInfof("Killing respawn controller -- not needed.\n");
 		}
-		MISC::PAUSE_DEATH_ARREST_RESTART(true);
-		MISC::IGNORE_NEXT_RESTART(true);
-		MISC::SET_FADE_OUT_AFTER_DEATH(false);
-		MISC::SET_FADE_IN_AFTER_DEATH_ARREST(false);
-		MISC::SET_FADE_OUT_AFTER_ARREST(false);
-		MISC::SET_FADE_IN_AFTER_DEATH_ARREST(false);
-		m_pLocalPlayer->Resurrect(m_pLocalPlayer->GetPosition(), m_pLocalPlayer->GetHeading(), 0);
-		PED::SET_PED_TO_RAGDOLL(m_pLocalPlayer->GetPed(), 0, 1000, 0, 0, 0, 0);
+		Arg->m_pLocalPlayer->Resurrect(Arg->m_pLocalPlayer->GetPosition(), Arg->m_pLocalPlayer->GetHeading(), 100);
+		PED::SET_PED_TO_RAGDOLL(Arg->m_pLocalPlayer->GetPed(), 0, 1000, 0, 0, 0, 0);
 		MISC::SET_TIME_SCALE(1.0);
 		GRAPHICS::ANIMPOSTFX_STOP_ALL();
 		HUD::DISPLAY_HUD(true);
+		MISC::FORCE_GAME_STATE_PLAYING();
 		modInfof("Player has been resurrected.\n");
+		HUD::BEGIN_TEXT_COMMAND_DISPLAY_HELP("STRING");
+		HUD::ADD_TEXT_COMPONENT_SUBSTRING_PLAYER_NAME("What? I thought I just died. What happened?");
+		HUD::END_TEXT_COMMAND_DISPLAY_HELP(0, 0, 1, 0);
+		return true;
+	}
+	void FlipAndNotify(bool& b, const char* DbgName) {
+		b = !b;
+		HUD::BEGIN_TEXT_COMMAND_THEFEED_POST("STRING");
+		auto res = legit::litFormat("%s set to %s", DbgName ? DbgName : "Recent boolean", b ? "TRUE" : "FALSE");
+		HUD::ADD_TEXT_COMPONENT_SUBSTRING_PLAYER_NAME(res.GetBuffer());
+		HUD::END_TEXT_COMMAND_THEFEED_POST_TICKER(0, 0);
 	}
 	void HandleVehicleSection() {
 		if (IsWithinDistanceCheck() && !m_bIsActivityDisturbed) {
@@ -1405,25 +1706,97 @@ public:
 			if (ENTITY::IS_ENTITY_A_MISSION_ENTITY(m_iDeluxo)) {
 				modInfof("Player has destroyed mission vehicle OUTSIDE of the target zone! (Wait for Player to exit area and delete/mark for deletion)\n");
 				ENTITY::SET_VEHICLE_AS_NO_LONGER_NEEDED(m_iDeluxo);
-
+				m_bIsBlipSetup = false;
+				m_DrivingBlip.Remove(); // not exactly ideal. 
+				CWorldMgr::GetWorld()->SetBlackoutAffectsVehicles(false);
+				CWorldMgr::GetWorld()->SetBlackoutState(false);
+				GTA::ResetDeathHandler();
+				m_Ufo.Delete();
+				m_bIsOnMission = false;
 				m_bUpdatePersistentState = false;
 				m_iDeluxo = 0;
 				m_bIsDeluxoConfigured = false;
 			}
 		}
 		if (m_pLocalPlayer->IsDead() && m_bIsOnMission) {
-			OverrideDeathHandler();
-/*			
-			m_bUpdatePersistentState = false;
-			ENTITY::SET_VEHICLE_AS_NO_LONGER_NEEDED(m_iDeluxo);
-			m_bIsDeluxoConfigured = false;
-			m_iDeluxo = 0;
-			modInfof("Player has died on activity. Resetting state.\n");
-			m_bIsOnMission = false;
-*/
+			GTA::SetDeathHandler(OverrideDeathHandler, this);
 		}
-		if (m_bUpdatePersistentState) {
+		if (WasCheatEntered("flipmission")) {
+			FlipAndNotify(m_bIsOnMission, MAKE_STR(m_bIsOnMission));
+		}
+		if (WasCheatEntered("fadeout2")) {
+			CFader::FadeScreenOut(2000);
+		}
+		if (WasCheatEntered("fadein2")) {
+			CFader::FadeScreenIn(2000);
+		}
+		if (m_bIsOnMission) {
+			if (WasCheatEntered("togglepauseblock")) {
+				FlipAndNotify(m_bOverridePauseMenuBlock, MAKE_STR(m_bOverridePauseMenuBlock));
+			}
 			ActivateSoloModeThisFrame();
+			CWorldMgr::GetWorld()->SetBlackoutState(true);
+			CWorldMgr::GetTimeController()->FreezeTimeAt(Time(0, 0, 0));
+			CWorldMgr::GetWorld()->SetBlackoutAffectsVehicles(false);
+			//lmao lazy hack in order to avoid the pause menu.
+			if (!m_bOverridePauseMenuBlock) {
+				PAD::DISABLE_CONTROL_ACTION(2, 199, 0);
+				PAD::DISABLE_CONTROL_ACTION(2, 200, 0);
+				if (PAD::IS_DISABLED_CONTROL_JUST_RELEASED(2, 199) || PAD::IS_DISABLED_CONTROL_JUST_RELEASED(2, 200)) {
+					HUD::BEGIN_TEXT_COMMAND_DISPLAY_HELP("STRING"); // - 1
+					HUD::ADD_TEXT_COMPONENT_SUBSTRING_PLAYER_NAME("You can't stop what is happening.");
+					HUD::END_TEXT_COMMAND_DISPLAY_HELP(0, 0, 1, 0); // - 2 -- these two are tied. although the raii is strange. 
+				}
+			} else {
+				PAD::ENABLE_CONTROL_ACTION(2, 199, 0);
+				PAD::ENABLE_CONTROL_ACTION(2, 200, 0);
+			}
+			if (!m_DrivingBlip.DoesExist()) {
+				m_DrivingBlip.Create(DrivingBlipCoords);
+			}
+			if (m_DrivingBlip.DoesExist() && !m_bIsBlipSetup) {
+				m_DrivingBlip.SetBlipAsRoute(true);
+				m_DrivingBlip.SetSprite(274);
+				m_DrivingBlip.SetBlipScale(1.5f);
+				m_DrivingBlip.SetBlipName("Your Grave");
+				m_DrivingBlip.SetSpriteColor(1);
+				m_bIsBlipSetup = true;
+			}
+			if (!m_Ufo.DoesExist()) {
+				auto string = rage::HashString("p_spinning_anus_s");
+				if (!STREAMING::HAS_MODEL_LOADED(string.ToHash())) {
+					STREAMING::REQUEST_MODEL(string.ToHash());
+				}
+				if (STREAMING::HAS_MODEL_LOADED(string.ToHash())) {
+					if (!m_Ufo.IsHandlingAResource() && !m_Ufo.DoesExist()) {
+						m_Ufo = CObject(string, DrivingBlipCoords, 1,1,1);
+						m_Ufo.SetLODDistance(0xffff);
+						m_Ufo.Freeze();
+					}
+				}
+			}
+			if (m_Ufo.DoesExist()) {
+				legit::gtav::CylinderDebug(this->DrivingBlipCoords.Subtract({0,0,50}), {10, 10, this->DrivingBlipCoords.z}, {45, 110, 185, 128});
+			}
+			if (StripHeight(this->DrivingBlipCoords).Distance(StripHeight(this->m_pLocalPlayer->GetPosition())) < 5.f) {
+				//modInfof("Player is within valid zone");
+				HUD::BEGIN_TEXT_COMMAND_DISPLAY_HELP("STRING"); // - 1
+				HUD::ADD_TEXT_COMPONENT_SUBSTRING_PLAYER_NAME("Press ~INPUT_CONTEXT~ to wake up.");
+				HUD::END_TEXT_COMMAND_DISPLAY_HELP(0, 0, 0, 0); // - 2 -- these two are tied. although the raii is strange. 
+				if (PAD::IS_CONTROL_JUST_RELEASED(0, 51)) {
+					// begin the player transition.
+					/*
+						Idea Space: 
+							- I want to have a character creator, ideally it would go within the silo interior like a government test programme type of vibe, might have to do some location scouting.
+							- I first need to get a demo of what a character creator would look like which will also require creating the hud menu system. 
+						Issues: 
+							- Currently no way to return to GTAV Singleplayer. ( needs research ).
+							- The other blip for the other "freemode" intro is active. Likely needs retuning from CFreemode (since I just need to set blip alpha, also should do some other stuff that use some of the newer CBlip and Warp instructions. 
+					*/
+					modInfof("TheScripter has not finished this segment\n");
+					ResetMission();
+				}
+			}			
 		}
 		if (!m_pLocalPlayer->IsInVehicle(m_iDeluxo)) return; // seems unlikely.	
 		if (!IsWithinDistanceCheck()) {
@@ -1437,11 +1810,13 @@ public:
 		if (!IsPlayerWithinZoneCheck() && !m_bIsOnMission) {
 			m_bUpdatePersistentState = true;
 			m_bIsOnMission = true;
+			m_DrivingBlip = CBlip(DrivingBlipCoords); // This is necessary because of the destruction above.
 			if (ModScriptHandler::IsScriptWithNameRunning("main")) {
 				modInfof("Main Terminated.\n");
 				ModScriptHandler::TerminateSP();
 			}
 		}
+
 		// player in vehicle.
 	}
 	bool IsPlayersCurrentVehicleADeluxo() {
@@ -1449,6 +1824,19 @@ public:
 		Vehicle Id = 0;
 		if (!gtaPlayerMgr::GetPlayer()->GetVehiclePlayerIsIn(Id)) return false;
 		return VEHICLE::IS_VEHICLE_MODEL(Id, MISC::GET_HASH_KEY("DELUXO"));
+	}
+	void ResetMission() {
+		ENTITY::SET_VEHICLE_AS_NO_LONGER_NEEDED(m_iDeluxo);
+		m_bIsBlipSetup = false;
+		m_DrivingBlip.Remove(); // not exactly ideal. 
+		CWorldMgr::GetWorld()->SetBlackoutAffectsVehicles(false);
+		CWorldMgr::GetWorld()->SetBlackoutState(false);
+		GTA::ResetDeathHandler();
+		m_Ufo.Delete();
+		m_bIsOnMission = false;
+		m_bUpdatePersistentState = false;
+		m_iDeluxo = 0;
+		m_bIsDeluxoConfigured = false;
 	}
 	/*
 		Sets all density values for Pedestrians and other world stuff to zero.
@@ -1458,6 +1846,7 @@ public:
 		VEHICLE::SET_RANDOM_VEHICLE_DENSITY_MULTIPLIER_THIS_FRAME(0.0);
 		VEHICLE::SET_VEHICLE_DENSITY_MULTIPLIER_THIS_FRAME(0.0);
 		VEHICLE::SET_AMBIENT_VEHICLE_RANGE_MULTIPLIER_THIS_FRAME(0.0);
+		VEHICLE::SET_FAR_DRAW_VEHICLES(false);
 		PED::SET_PED_DENSITY_MULTIPLIER_THIS_FRAME(0.0);
 		PED::SET_SCENARIO_PED_DENSITY_MULTIPLIER_THIS_FRAME(0.0, 0.0);
 		VEHICLE::SET_DISABLE_RANDOM_TRAINS_THIS_FRAME(true);
@@ -1485,6 +1874,14 @@ public:
 		}
 	}
 private:
+	CSynchronizedScene m_UfoScene{};
+	CObject m_Ufo{};
+	int UFOObject = 0;
+	bool m_bOverridePauseMenuBlock = false;
+	bool m_bIsBlipSetup = false;
+	//double use.
+	legit::Vec3f DrivingBlipCoords = {-1725.449f, -190.3516f, 93.0902f};
+	CBlip m_DrivingBlip;
 	bool m_bIsOnMission = false;
 	legit::Vec3f m_MissionStartPosition = {47.4393, -862.2044, 30.0416};	
 	Vehicle m_iDeluxo = 0;

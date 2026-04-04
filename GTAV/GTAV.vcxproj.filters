@@ -33,6 +33,12 @@
     <ClInclude Include="log.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="world\world.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ui\HudMgr.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GTAV.cpp">

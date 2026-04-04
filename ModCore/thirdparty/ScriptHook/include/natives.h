@@ -7561,7 +7561,7 @@ namespace NETWORK
 	// Sets 'loc' variable used in MetricVEHICLE_DIST_DRIVEN
 	NATIVE_DECL void NETWORK_SET_VEHICLE_DRIVEN_LOCATION(Hash location) { invoke<void>(0xA0CE91E47531D3BB, location); } // 0xA0CE91E47531D3BB b2944
 	NATIVE_DECL void NETWORK_RESURRECT_LOCAL_PLAYER(float x, float y, float z, float heading, BOOL p4, BOOL changetime, BOOL p6, int p7, int p8) { invoke<void>(0xEA23C49EAA83ACFB, x, y, z, heading, p4, changetime, p6, p7, p8); } // 0xEA23C49EAA83ACFB 0xF1F9D4B4 b323
-	NATIVE_DECL void NETWORK_RESURRECT_LOCAL_PLAYER(Vector3 vec, float heading, BOOL p4, BOOL changetime, BOOL p6, int p7, int p8) { invoke<void>(0xEA23C49EAA83ACFB, vec.x, vec.y, vec.z, heading, p4, changetime, p6, p7, p8); } // 0xEA23C49EAA83ACFB 0xF1F9D4B4 b323
+	NATIVE_DECL void NETWORK_RESURRECT_LOCAL_PLAYER(Vector3 vec, float heading, int nInvincibilityTime, BOOL changetime, BOOL bUnpauseRenderPhases, int Location, int Reason) { invoke<void>(0xEA23C49EAA83ACFB, vec.x, vec.y, vec.z, heading, nInvincibilityTime, changetime, bUnpauseRenderPhases, Location, Reason); } // 0xEA23C49EAA83ACFB 0xF1F9D4B4 b323
 	NATIVE_DECL void NETWORK_SET_LOCAL_PLAYER_INVINCIBLE_TIME(int time) { invoke<void>(0x2D95C7E2D7E07307, time); } // 0x2D95C7E2D7E07307 0xFEA9B85C b323
 	NATIVE_DECL BOOL NETWORK_IS_LOCAL_PLAYER_INVINCIBLE() { return invoke<BOOL>(0x8A8694B48715B000); } // 0x8A8694B48715B000 0x8DE13B36 b323
 	NATIVE_DECL void NETWORK_DISABLE_INVINCIBLE_FLASHING(Player player, BOOL toggle) { invoke<void>(0x9DD368BF06983221, player, toggle); } // 0x9DD368BF06983221 0x8D27280E b323
