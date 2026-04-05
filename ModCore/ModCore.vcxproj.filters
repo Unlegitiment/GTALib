@@ -48,6 +48,15 @@
     <ClInclude Include="math\Color.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="utils\Copy.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rage\HashString.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rage\numbers.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="logger\netLog.cpp">

@@ -1,4 +1,5 @@
 #pragma once
+#include <math.h>
 namespace legit {
 	template<typename T, int SuitableDefault> class __Vector2 {
 	public:

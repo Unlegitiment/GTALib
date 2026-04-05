@@ -20,6 +20,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="logger\netLog.h" />
+    <ClInclude Include="rage\HashString.h" />
+    <ClInclude Include="rage\numbers.h" />
+    <ClInclude Include="utils\Copy.h" />
     <ClInclude Include="math\Color.h" />
     <ClInclude Include="math\Point.h" />
     <ClInclude Include="math\Vector2.h" />

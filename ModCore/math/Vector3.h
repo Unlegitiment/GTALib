@@ -1,4 +1,5 @@
 #pragma once
+#include <ModCore/thirdparty/ScriptHook/include/types.h>
 namespace legit {
 	template<typename T> class __Vector3 {
 	public:
@@ -61,13 +62,26 @@ namespace legit {
 		bool operator!=(const OtherVec& other) {
 			return this->x != other.x || this->y != other.y || this->z != other.z;
 		}
-		friend std::ostream& operator<<(std::ostream& os, const __Vector3<T>& v) {
+/*		friend std::ostream& operator<<(std::ostream& os, const __Vector3<T>& v) {
 			os << "{ " << v.x << ", " << v.y << ", " << v.z << " }";
 			return os;
-		}
+		}*/
 	public:
 		Type x, y, z;
 	};
 	using Vec3f = __Vector3<float>;
 	using Vec3i = __Vector3<int>;
+
+	/*
+		PURPOSE: Convert a Float3 Vector to a Float3_Padded Vector. (ScriptHookV Utility)
+	*/
+	static ::Vector3 Promote(const legit::Vec3f& v) {
+		return {v.x, 0l, v.y, 0l, v.z, 0l};
+	}
+	/*
+		PURPOSE: Convert a ScriptHookV (Padded Float3) Into a Float3 type.
+	*/
+	static Vec3f Demote(const ::Vector3& v) {
+		return {v.x,v.y,v.z};
+	}
 }

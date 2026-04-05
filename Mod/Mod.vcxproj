@@ -29,6 +29,12 @@
     <ProjectReference Include="..\ModCore\ModCore.vcxproj">
       <Project>{7d4020ea-3d4e-46bd-a074-8db50652c48a}</Project>
     </ProjectReference>
+    <ProjectReference Include="E:\A_Development\Legit Engine\Main\LITemplates\LITemplates.vcxproj">
+      <Project>{153698da-2ae2-418f-b56b-36a0197d74f6}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="mod\main.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>18.0</VCProjectVersion>
@@ -143,7 +149,7 @@
       <LanguageStandard>stdcpp17</LanguageStandard>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\;E:\A_Development\Legit Engine\Main\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>

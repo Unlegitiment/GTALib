@@ -24,8 +24,12 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="entities\entity.h" />
+    <ClInclude Include="entities\object.h" />
+    <ClInclude Include="entities\ped.h" />
     <ClInclude Include="GTAV.h" />
     <ClInclude Include="log.h" />
+    <ClInclude Include="resourcehandler.h" />
     <ClInclude Include="scriptmanagement\scriptctrl.h" />
     <ClInclude Include="ui\HudMgr.h" />
     <ClInclude Include="ui\rect\base.h" />

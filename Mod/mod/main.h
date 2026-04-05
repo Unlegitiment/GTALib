@@ -15,33 +15,7 @@
 #include <string>
 #include <array>
 #include <typeinfo>
-namespace rage {
-	class HashString {
-	public:
-		static constexpr size_t MaxLen = 256;
-		HashString() = default;
-		HashString(const char* Source) {
-			m_String = Source;
-			m_Hash = MISC::GET_HASH_KEY(m_String.c_str());
-		}
-		Hash ToHash() const {
-			return m_Hash; // is this slow? yes. would it be quicker to just steal some hash impl from some other mod, yes. fuck you.
-		}
-		const char* GetString() const {
-			return m_String.c_str(); // DON'T YOU DARE TOUCH MAH SPAGHET!
-		}
-		~HashString() {
-		}
-	private:
-		std::string m_String;
-		Hash m_Hash = NULL;
-	};
-	template<typename T>
-	static void Clamp(T& Value, const T& Minimum, const T& Maximum) {
-		if (Value > Maximum) Value = Maximum;
-		if (Value < Minimum) Value = Minimum;
-	}
-}
+
 
 class PlayerSwitchScaleform {
 public:
@@ -1074,20 +1048,6 @@ public:
 private:
 
 };
-namespace legit {
-	/*
-		PURPOSE: Convert a Float3 Vector to a Float3_Padded Vector. (ScriptHookV Utility)
-	*/
-	static ::Vector3 Promote(const legit::Vec3f& v) {
-		return {v.x, 0l, v.y, 0l, v.z, 0l};
-	}
-	/*
-		PURPOSE: Convert a ScriptHookV (Padded Float3) Into a Float3 type.
-	*/
-	static Vec3f Demote(const ::Vector3& v) {
-		return {v.x,v.y,v.z};
-	}
-}
 class EntityHelpers {
 public:
 	static void SetCoords(Entity Id, legit::Vec3f v, bool xAxis = true, bool yAxis = 0, bool zAxis = 0, bool clearArea = 1) {
@@ -1143,9 +1103,18 @@ private:
 	std::vector<T> m_Functors;
 };
 #include <functional>
+#include <GTAV/world/world.h>
+#include <GTAV/ui/HudMgr.h>
+#include <GTAV/GTAV.h>
+#include <GTAV/entities/ped.h>
+#include <GTAV/entities/object.h>
 class gtaPlayer {
 	template<typename T>
 	using func = std::function<T>;
+	static CPed LoadAccess() {
+		int result = PLAYER::PLAYER_PED_ID();
+		return CPed(result);
+	}
 public:
 	using PlayerMoveEvent = func<void(legit::Vec3f)>;
 	Event<PlayerMoveEvent> m_MovementHandlers;
@@ -1155,7 +1124,7 @@ public:
 	Event<PlayerSetCoordEvent> m_PlayerTeleportEvents;
 	using PlayerPedChangeEvent = func<void(Ped)>;
 	Event<PlayerPedChangeEvent> m_PedChangeHandlers;
-	gtaPlayer() {
+	gtaPlayer() : m_Ped(LoadAccess()) {
 		m_PlayerPedId = PLAYER::PLAYER_PED_ID();
 		m_PlayerNetId = PLAYER::PLAYER_ID();
 	}
@@ -1178,8 +1147,11 @@ public:
 	Player GetNetHandle() const {
 		return this->m_PlayerNetId;
 	}
-	Ped GetPed() const {
-		return this->m_PlayerPedId;
+	Ped GetPedId() const {
+		return this->m_Ped.GetHandle();
+	}
+	CPed& GetPed() {
+		return this->m_Ped;
 	}
 	void SetPlayerPed(Ped pPed, bool p2, bool ResetDamage) {
 		if (!ENTITY::DOES_ENTITY_EXIST(pPed) || PED::IS_PED_A_PLAYER(pPed)) return;
@@ -1243,6 +1215,7 @@ public:
 
 	}
 private:
+	CPed m_Ped{};
 	Player m_PlayerNetId = 0;
 	Ped m_PlayerPedId;
 	legit::Vec3f m_PlayerPosition;
@@ -1275,36 +1248,36 @@ namespace legit {
 #endif
 		}
 		static void CylinderDebug(legit::Vec3f Start, float fRadi, legit::Colorf Col) {
-			GRAPHICS::DRAW_MARKER(1, Promote(Start), Promote(legit::Vec3f{0,0,0}), Promote(legit::Vec3f{0,0,0}), Promote(legit::Vec3f{fRadi*2, fRadi*2, 9999}), Col.r, Col.g, Col.b, Col.a, 0, 0, 0, 0, 0, 0, 0);
+			GRAPHICS::DRAW_MARKER(1, Promote(Start), Promote(legit::Vec3f{0,0,0}), Promote(legit::Vec3f{0,0,0}), Promote(legit::Vec3f{fRadi * 2, fRadi * 2, 9999}), Col.r, Col.g, Col.b, Col.a, 0, 0, 0, 0, 0, 0, 0);
 		}
 		static void CylinderDebug(legit::Vec3f Start, legit::Vec3f Scale, legit::Colorf Col) {
 			GRAPHICS::DRAW_MARKER(1, Promote(Start), Promote(legit::Vec3f{0,0,0}), Promote(legit::Vec3f{0,0,0}), Promote(Scale), Col.r, Col.g, Col.b, Col.a, 0, 0, 0, 0, 0, 0, 0);
 		}
 	}
 }
-class ModScriptHandler : public ScriptThreadController{
+class ModScriptHandler : public ScriptThreadController {
 public:
 	static void TerminateSP() {
 		PLAYER::FORCE_CLEANUP(2);
 		WAIT(0); // DO ONE TICK!
 		//if(1){
-			SCRIPT::SCRIPT_THREAD_ITERATOR_RESET();
-			int thread = SCRIPT::SCRIPT_THREAD_ITERATOR_GET_NEXT_THREAD_ID();
-			Hash h = SCRIPT::GET_HASH_OF_THIS_SCRIPT_NAME();
-			for (; SCRIPT::IS_THREAD_ACTIVE(thread); thread = SCRIPT::SCRIPT_THREAD_ITERATOR_GET_NEXT_THREAD_ID()) {
-				rage::HashString CurScript = rage::HashString(SCRIPT::GET_NAME_OF_SCRIPT_WITH_THIS_ID(thread));
-				if (h != CurScript.ToHash()) {
-					if (CurScript.ToHash() == rage::HashString("main_persistent").ToHash()) {
-						modInfof("Skipping a potential ScriptHookV important thread.\n");
-						continue;
-					}
-					gtaInfof("Script killing thread with name: %s\n", CurScript.GetString());
-					SCRIPT::TERMINATE_THREAD(thread);
-				} else {
-					gtaInfof("Skipping thread with ID %d, it is either our Script or another mod.\n", thread);
+		SCRIPT::SCRIPT_THREAD_ITERATOR_RESET();
+		int thread = SCRIPT::SCRIPT_THREAD_ITERATOR_GET_NEXT_THREAD_ID();
+		Hash h = SCRIPT::GET_HASH_OF_THIS_SCRIPT_NAME();
+		for (; SCRIPT::IS_THREAD_ACTIVE(thread); thread = SCRIPT::SCRIPT_THREAD_ITERATOR_GET_NEXT_THREAD_ID()) {
+			rage::HashString CurScript = rage::HashString(SCRIPT::GET_NAME_OF_SCRIPT_WITH_THIS_ID(thread));
+			if (h != CurScript.ToHash()) {
+				if (CurScript.ToHash() == rage::HashString("main_persistent").ToHash()) {
+					modInfof("Skipping a potential ScriptHookV important thread.\n");
+					continue;
 				}
+				gtaInfof("Script killing thread with name: %s\n", CurScript.GetString());
+				SCRIPT::TERMINATE_THREAD(thread);
+			} else {
+				gtaInfof("Skipping thread with ID %d, it is either our Script or another mod.\n", thread);
 			}
-		//}
+		}
+	//}
 		BRAIN::DISABLE_SCRIPT_BRAIN_SET(0);
 		BRAIN::DISABLE_SCRIPT_BRAIN_SET(1);
 		BRAIN::DISABLE_SCRIPT_BRAIN_SET(2);
@@ -1319,7 +1292,6 @@ public:
 	}
 private:
 };
-#define NO_COPY(T) T& operator=(const T&) = delete; T(const T&) = delete;
 /*
 	There is multiple methods that are generally synonmous with GTA Live Resources, such as Entities, Blips, etc. Despite how much I want RAII the model does not support it.
 */
@@ -1337,7 +1309,7 @@ public:
 	}
 	//Simply far too many steps required to copy and the state is too variable. Unless I wanted to replicate the entire state of a blip inside this class. But even then outside sources could change the blip. (like other scripts and such) 
 	NO_COPY(CBlip);
-	CBlip(CBlip&& b) noexcept : m_iBlip(b.m_iBlip), m_Name(b.m_Name){
+	CBlip(CBlip&& b) noexcept : m_iBlip(b.m_iBlip), m_Name(b.m_Name) {
 		b.m_iBlip = 0;
 		b.m_Name.clear();
 	}
@@ -1404,135 +1376,6 @@ private:
 	Blip m_iBlip = 0;
 	std::string m_Name;
 };
-class gtaResourceHandler {
-public:
-	static constexpr Entity NULL_HANDLE = 0;
-	gtaResourceHandler() = default;
-	gtaResourceHandler(Entity& iEnt) : m_EntityHandle(iEnt) { iEnt = 0; };
-	gtaResourceHandler(gtaResourceHandler&& obj) : m_EntityHandle(obj.m_EntityHandle) {
-		obj.m_EntityHandle = NULL_HANDLE;
-	}
-	NO_COPY(gtaResourceHandler);
-	virtual ~gtaResourceHandler() = default;
-	gtaResourceHandler& operator=(gtaResourceHandler&& obj) {
-		if (this != &obj) {
-			if (this->IsHandlingAResource()) {
-				this->Delete();
-			}
-			m_EntityHandle = obj.m_EntityHandle;
-			obj.m_EntityHandle = NULL_HANDLE;
-		}
-		return *this;
-	}
-	Entity GetHandle() const {
-		return this->m_EntityHandle;
-	}
-	void Delete() {
-		if (this->IsHandlingAResource()) {
-			this->DeleteInternal();
-			this->m_EntityHandle = NULL_HANDLE;
-		}
-	}
-	bool IsHandlingAResource() const {
-		return this->m_EntityHandle != NULL_HANDLE;
-	}
-protected:
-	/*
-		Allows for diversification on how the process should be handled, but does not conflate the knowledge of the live resource with m_EntityHandle's scope.
-	*/
-	virtual void DeleteInternal() = 0;
-	gtaResourceHandler(const Entity& ent) : m_EntityHandle(ent){}
-private:
-	Entity m_EntityHandle = NULL_HANDLE; // this is much more of a convenience is it worth it?
-
-};
-class CEntity : public gtaResourceHandler{
-public:
-	CEntity() = default;
-	explicit CEntity(Entity& Handle) : gtaResourceHandler(Handle){}
-	CEntity(CEntity&&) = default;
-	CEntity& operator=(CEntity&&) = default;
-protected:
-	CEntity(const Entity& Handle) : gtaResourceHandler(Handle) { // Specifically to resource creation.
-	
-	};
-public:
-	void SetAlpha(float fAlpha, bool bAffectSkin) {
-		rage::Clamp(fAlpha, 0.f, 1.f);
-		ENTITY::SET_ENTITY_ALPHA(this->GetHandle(), fAlpha * 255l, bAffectSkin);
-	}
-	void ResetAlpha() {
-		ENTITY::RESET_ENTITY_ALPHA(this->GetHandle());
-	}
-	void SetPosition(legit::Vec3f Pos, bool bAlive, bool bDeadFlag, bool bRagDollFlag, bool bClearArea) {
-		ENTITY::SET_ENTITY_COORDS(this->GetHandle(), legit::Promote(Pos), bAlive, bDeadFlag, bRagDollFlag, bClearArea);
-	}
-	legit::Vec3f GetPosition(bool bAlive) {
-		return legit::Demote(ENTITY::GET_ENTITY_COORDS(this->GetHandle(), bAlive));
-	}
-	bool IsAnEntity() const {
-		return ENTITY::IS_AN_ENTITY(this->GetHandle());
-	}
-	bool IsAMissionEntity() const {
-		return ENTITY::IS_ENTITY_A_MISSION_ENTITY(this->GetHandle());
-	}
-	bool IsAPed() const {
-		return ENTITY::IS_ENTITY_A_PED(this->GetHandle());
-	}
-	bool IsAnObject() const {
-		return ENTITY::IS_ENTITY_AN_OBJECT(this->GetHandle());
-	}
-	bool IsAVehicle() const {
-		return ENTITY::IS_ENTITY_A_VEHICLE(this->GetHandle());
-	}
-	bool IsDead(bool bUnk) const {
-		return ENTITY::IS_ENTITY_DEAD(this->GetHandle(), bUnk);
-	}
-	bool DoesExist() const {
-		return ENTITY::DOES_ENTITY_EXIST(this->GetHandle());
-	}
-	// Verbs. Makes it clearer on intention.
-	void Freeze() const {
-		ENTITY::FREEZE_ENTITY_POSITION(this->GetHandle(), true);
-	}
-	void Unfreeze() const {
-		ENTITY::FREEZE_ENTITY_POSITION(this->GetHandle(), false);
-	}
-	void SetLODDistance(int iDistance) const {
-		ENTITY::SET_ENTITY_LOD_DIST(this->GetHandle(), iDistance);
-	}
-	virtual void SetAsNoLongerNeeded() const {
-		int _newHandle = GetHandle();
-		ENTITY::SET_ENTITY_AS_NO_LONGER_NEEDED(_newHandle);
-	}
-	virtual ~CEntity() = default;
-protected:
-	virtual void DeleteInternal() {
-		int _newHandle = (this->GetHandle());
-		ENTITY::DELETE_ENTITY(_newHandle);
-	}
-private:
-
-};
-class CObject : public CEntity{
-public:
-	CObject() = default;
-	CObject(const rage::HashString& mHash, legit::Vec3f Position, bool IsNet, bool isScriptHostObj, bool isDynamic) : CEntity(OBJECT::CREATE_OBJECT(mHash.ToHash(), legit::Promote(Position), IsNet, isScriptHostObj, isDynamic))
-	{ }
-	CObject(CObject&&) = default;
-	CObject& operator=(CObject&&) = default;
-	~CObject() {}
-	void SetAsNoLongerNeeded() {
-		int _newHandle = this->GetHandle();
-		ENTITY::SET_OBJECT_AS_NO_LONGER_NEEDED(_newHandle); // useless.
-	}
-protected:
-	void DeleteInternal() override {
-		int iHandle = (this->GetHandle());
-		OBJECT::DELETE_OBJECT(iHandle); // since I already handle it, this functions reference is irrelevent.
-	}
-private:
-};
 class CSynchronizedScene {
 public:
 	CSynchronizedScene() = default;
@@ -1579,7 +1422,7 @@ public:
 	}
 	static constexpr float STARTER_DISTANCE_CHECK = 150; // Specifically to spawn the ambient event.
 	static constexpr float STARTER_ZONE_CHECK = 7; // In order to check the Distance from the starting position, we want as much of a seemless start as possible.
-	CEndIntro() : m_pLocalPlayer(gtaPlayerMgr::GetPlayer()){
+	CEndIntro() : m_pLocalPlayer(gtaPlayerMgr::GetPlayer()) {
 		//m_pLocalPlayer->Kill();
 		if (this->IsPlayersCurrentVehicleADeluxo()) {
 			gtaPlayerMgr::GetPlayer()->GetVehiclePlayerIsIn(m_iDeluxo);
@@ -1621,7 +1464,7 @@ public:
 		}
 		if (WasCheatEntered("fadeout")) {
 			CAM::DO_SCREEN_FADE_OUT(2000);
-		} 
+		}
 		if (WasCheatEntered("fadein")) {
 			CAM::DO_SCREEN_FADE_IN(2000);
 		}
@@ -1647,10 +1490,10 @@ public:
 		this->m_bIsActivityDisturbed = Status;
 	}
 	/*
-		Notes for a future impl: 
-		Death Signature. bool HandleDeath(void*); 
-		Returns. Whether the death is handled or needs more time to update. 
-		Input Parameters, whatever is required to handle the death packed into one pointer. 
+		Notes for a future impl:
+		Death Signature. bool HandleDeath(void*);
+		Returns. Whether the death is handled or needs more time to update.
+		Input Parameters, whatever is required to handle the death packed into one pointer.
 	*/
 	static bool OverrideDeathHandler(void* arg) {
 		CEndIntro* Arg = (CEndIntro*)arg;
@@ -1669,7 +1512,7 @@ public:
 			modInfof("Killing respawn controller -- not needed.\n");
 		}
 		Arg->m_pLocalPlayer->Resurrect(Arg->m_pLocalPlayer->GetPosition(), Arg->m_pLocalPlayer->GetHeading(), 100);
-		PED::SET_PED_TO_RAGDOLL(Arg->m_pLocalPlayer->GetPed(), 0, 1000, 0, 0, 0, 0);
+		PED::SET_PED_TO_RAGDOLL(Arg->m_pLocalPlayer->GetPedId(), 0, 1000, 0, 0, 0, 0);
 		MISC::SET_TIME_SCALE(1.0);
 		GRAPHICS::ANIMPOSTFX_STOP_ALL();
 		HUD::DISPLAY_HUD(true);
@@ -1698,7 +1541,7 @@ public:
 				m_iDeluxo = 0;
 				SetDisturbedStatus(true);
 			}
-		} 
+		}
 		if (!IsWithinDistanceCheck() && m_bIsActivityDisturbed) {
 			SetDisturbedStatus(false);
 		}
@@ -1769,7 +1612,7 @@ public:
 				}
 				if (STREAMING::HAS_MODEL_LOADED(string.ToHash())) {
 					if (!m_Ufo.IsHandlingAResource() && !m_Ufo.DoesExist()) {
-						m_Ufo = CObject(string, DrivingBlipCoords, 1,1,1);
+						m_Ufo = CObject(string, DrivingBlipCoords, 1, 1, 1);
 						m_Ufo.SetLODDistance(0xffff);
 						m_Ufo.Freeze();
 					}
@@ -1786,17 +1629,17 @@ public:
 				if (PAD::IS_CONTROL_JUST_RELEASED(0, 51)) {
 					// begin the player transition.
 					/*
-						Idea Space: 
+						Idea Space:
 							- I want to have a character creator, ideally it would go within the silo interior like a government test programme type of vibe, might have to do some location scouting.
-							- I first need to get a demo of what a character creator would look like which will also require creating the hud menu system. 
-						Issues: 
+							- I first need to get a demo of what a character creator would look like which will also require creating the hud menu system.
+						Issues:
 							- Currently no way to return to GTAV Singleplayer. ( needs research ).
-							- The other blip for the other "freemode" intro is active. Likely needs retuning from CFreemode (since I just need to set blip alpha, also should do some other stuff that use some of the newer CBlip and Warp instructions. 
+							- The other blip for the other "freemode" intro is active. Likely needs retuning from CFreemode (since I just need to set blip alpha, also should do some other stuff that use some of the newer CBlip and Warp instructions.
 					*/
 					modInfof("TheScripter has not finished this segment\n");
 					ResetMission();
 				}
-			}			
+			}
 		}
 		if (!m_pLocalPlayer->IsInVehicle(m_iDeluxo)) return; // seems unlikely.	
 		if (!IsWithinDistanceCheck()) {
@@ -1854,7 +1697,7 @@ public:
 	void SummonVehicle() {
 		if (!m_iDeluxo || !ENTITY::DOES_ENTITY_EXIST(m_iDeluxo)) {
 			STREAMING::REQUEST_MODEL(MISC::GET_HASH_KEY("DELUXO"));
-			m_iDeluxo = VEHICLE::CREATE_VEHICLE(MISC::GET_HASH_KEY("DELUXO"), legit::Promote({47.4393, -862.2044, 30.0416}), -20.29f, 0,1,0);
+			m_iDeluxo = VEHICLE::CREATE_VEHICLE(MISC::GET_HASH_KEY("DELUXO"), legit::Promote({47.4393, -862.2044, 30.0416}), -20.29f, 0, 1, 0);
 			m_bIsDeluxoConfigured = false;
 			modInfof("vehicle (deluxo) is being created\n");
 		}
@@ -1883,12 +1726,191 @@ private:
 	legit::Vec3f DrivingBlipCoords = {-1725.449f, -190.3516f, 93.0902f};
 	CBlip m_DrivingBlip;
 	bool m_bIsOnMission = false;
-	legit::Vec3f m_MissionStartPosition = {47.4393, -862.2044, 30.0416};	
+	legit::Vec3f m_MissionStartPosition = {47.4393, -862.2044, 30.0416};
 	Vehicle m_iDeluxo = 0;
 	bool m_bIsDeluxoConfigured = false;
 	gtaPlayer* m_pLocalPlayer = nullptr;
 };
+//#include <LITemplates/alloc/Default.h>
+struct sBlendData {
+	int ShapeFirst, ShapeSecond;
+	int SkinFirst, SkinSecond;
+	float ShapeMix, SkinMix;
+	sBlendData() = default;
+	sBlendData(const sBlendDataRaw& Raw) : ShapeFirst(Raw.shapeFirst), ShapeSecond(Raw.shapeSecond),
+		SkinFirst(Raw.skinFirst), SkinSecond(Raw.skinSecond),
+		ShapeMix(Raw.shapeMix), SkinMix(Raw.skinMix)
+	{
+		
+	}
+	sBlendDataRaw ToRaw() const {
+		sBlendDataRaw bData{};
+		bData.shapeFirst = ShapeFirst;
+		bData.shapeSecond = ShapeSecond;
+		bData.skinFirst = SkinFirst;
+		bData.skinSecond = SkinSecond;
+		bData.shapeMix = ShapeMix;
+		bData.skinMix = SkinMix;
+		return bData;
+	}
+};
+class CCharacterCreator {
+public:
+	static bool DeathHandler(void* vPtr) {
+		MISC::IGNORE_NEXT_RESTART(true);
+		MISC::PAUSE_DEATH_ARREST_RESTART(false);
+		MISC::SET_FADE_OUT_AFTER_DEATH(false);
+		MISC::SET_FADE_IN_AFTER_DEATH_ARREST(false);
+		auto Player = gtaPlayerMgr::GetPlayer();
+		if (!Player) {
+			modErrorf("Player does not exist in Manager, likely due to a lack of setup or something critical has gone wrong. We cannot handle death.\n");
+			return true; // Invalid.
+		}
+		if (Player->GetPed().IsRagdolling()) {
+			modInfof("Player is ragdolling\n");
+			return false;
+		}
+		if (Player->GetPed().IsStopped()) {
+			modInfof("Player has been resurrected.\n");
+			Player->Resurrect(Player->GetPosition(), Player->GetHeading(), 1000);
+			Player->GetPed().SetPedToRagdollScriptControl(0, 0, 0);
+			return true;
+		}
+		modInfof("Player hasn't been resurrected yet!\n");
+		return false;
+	}
+	CCharacterCreator() {
+		ModScriptHandler::TerminateSP();
+	};
+	~CCharacterCreator() {
+		m_pTargetPedForCustomization->Delete();
+	}
+	void Update() {
+		MinimizeDistraction();
+		if (gtaPlayerMgr::GetPlayer()->IsDead()) {
+			GTA::SetDeathHandler(DeathHandler, nullptr);
+		}
+		if (IsKeyJustUp(VK_F13)) {
+			if (!m_pTargetPedForCustomization) {
+				ShouldRequestPed = true;
+			}
+			if (m_pTargetPedForCustomization) {
+				if (!m_pTargetPedForCustomization->DoesExist()) {
+					ShouldRequestPed = true;
+					return;
+				}
+				if (m_pTargetPedForCustomization->IsDead(true)) {
+					m_pTargetPedForCustomization->Resurrect();
+					m_pTargetPedForCustomization->EnableCollision(true);
+					m_pTargetPedForCustomization->CancelAllTasksImmediately();
+					legit::Vec3f vResult = GetPositionFromFront(gtaPlayerMgr::GetPlayer()->GetPed(), 5);
+					m_pTargetPedForCustomization->SetPosition(vResult, 1, 1, 1, 0);
+					m_pTargetPedForCustomization->SetHeading(gtaPlayerMgr::GetPlayer()->GetHeading() - 180);
+					ApplyCreatorEffects(*m_pTargetPedForCustomization);
+				} else {
+					modInfof("Ped already exists.\n");
+				}
+			}
+		}
+		if (ShouldRequestPed && !m_pTargetPedForCustomization) {
+			m_pTargetPedForCustomization = SummonTestPed();
+			if (m_pTargetPedForCustomization && m_pTargetPedForCustomization->IsHandlingAResource()) {
+				ShouldRequestPed = false;
+			}
+		}
+		if (!m_pTargetPedForCustomization) {
+			return; // Is this a shit method of doing this, by technicality yes, do I care for this simple demo, no.
+		}
+		if (!IsPedValidForBlend(*m_pTargetPedForCustomization)) {
+			return;
+		}
+		sBlendData data{};
+		data.ShapeFirst = eHeadParents::Misty;
+		data.ShapeSecond = eHeadParents::John;
+		data.ShapeMix = 0.5f; // Should be in the middle of the scale. 
+		data.SkinFirst = eHeadParents::Misty;
+		data.SkinSecond = eHeadParents::John; 
+		data.SkinMix = 1.0f; // Full SkinSecond.
+		m_pTargetPedForCustomization->SetHeadBlendData(data.ToRaw(), true);
+		m_pTargetPedForCustomization->SetEyeColor(eEyeColor::RedSnake);
+/*		int HairComponents = m_pTargetPedForCustomization->GetNumberOfDrawableVariations(ePedVarComp::PV_COMP_HAIR);
+		int LastCheck = 0;
+		for (int i = 0; i < HairComponents + 1; i++) {
+			if (i == HairComponents) {
+				i = 0;
+			}
+			if (MISC::GET_GAME_TIMER() > LastCheck + 2000) {
+				LastCheck = MISC::GET_GAME_TIMER();
+				m_pTargetPedForCustomization->SetPedComponent(ePedVarComp::PV_COMP_HAIR, i, 0, 1);
+				modInfof("Player Set Component %d\n", i);
+			}
+		}
+*/
+	}
+private:
+	bool IsPedValidForBlend(CPed& ped) {
+		return ped.IsModel("mp_m_freemode_01") || ped.IsModel("mp_f_freemode_01");
+	}
+	legit::Vec3f GetPositionFromFront(CPed& pPed, float fDistance) const {
+		auto fwd = pPed.GetForwardVector();
+		auto pos = pPed.GetPosition(1);
+		float fHead = pPed.GetHeading();
+		return {
+			pos.x + fwd.x * fDistance,
+			pos.y + fwd.y * fDistance,
+			pos.z + fwd.z * fDistance
+		};
+	}
+	CPed* m_pTargetPedForCustomization = 0;
+	bool ShouldRequestPed = false;
+	CPed* SummonTestPed() {
+		auto Ped = rage::HashString("mp_m_freemode_01");
+		if (!STREAMING::HAS_MODEL_LOADED(Ped.ToHash())) {
+			modInfof("Ped Model has not loaded yet.\n");
+			STREAMING::REQUEST_MODEL(Ped.ToHash());
+			return nullptr;
+		} else {
+			legit::Vec3f vResult = GetPositionFromFront(gtaPlayerMgr::GetPlayer()->GetPed(), 5);
+			auto result = CPed(0, Ped, vResult, gtaPlayerMgr::GetPlayer()->GetHeading() - 180, 1, 1);
+			if (!result.DoesExist()) {
+				modInfof("Resultant ped does not exist yet!\n");
+				return nullptr;
+			} else {
+				ApplyCreatorEffects(result);
+				return new CPed(std::move(result));
+			}
+		}
+	}
+	void ApplyCreatorEffects(CPed& Ped) {
+		Ped.BlockPermanentEvents();
+		Ped.DisableRagdoll();
+	}
+	void MinimizeDistraction() {
+		VEHICLE::SET_PARKED_VEHICLE_DENSITY_MULTIPLIER_THIS_FRAME(0.0);
+		VEHICLE::SET_RANDOM_VEHICLE_DENSITY_MULTIPLIER_THIS_FRAME(0.0);
+		VEHICLE::SET_VEHICLE_DENSITY_MULTIPLIER_THIS_FRAME(0.0);
+		VEHICLE::SET_AMBIENT_VEHICLE_RANGE_MULTIPLIER_THIS_FRAME(0.0);
+		VEHICLE::SET_FAR_DRAW_VEHICLES(false);
+		PED::SET_PED_DENSITY_MULTIPLIER_THIS_FRAME(0.0);
+		PED::SET_SCENARIO_PED_DENSITY_MULTIPLIER_THIS_FRAME(0.0, 0.0);
+		VEHICLE::SET_DISABLE_RANDOM_TRAINS_THIS_FRAME(true);
+	}
 
+};
+class CTheCreator {
+public:
+	static void Init() {
+		sm_pCreator = new CCharacterCreator();
+	}
+	static void Update() {
+		sm_pCreator->Update();
+	}
+	static void Shutdown() {
+		delete sm_pCreator;
+	}
+private:
+	static inline CCharacterCreator* sm_pCreator = nullptr;
+};
 
 class CFreemode {
 private:
@@ -2020,7 +2042,7 @@ public:
 		if (ENTITY::DOES_ENTITY_EXIST(pPlayerTarget)) {
 			DLC::ON_ENTER_MP(); // activate MP Map. (does not stream assets for ipls.
 			//ped management
-			Ped Old = gtaPlayerMgr::GetPlayer()->GetPed();
+			Ped Old = gtaPlayerMgr::GetPlayer()->GetPedId();
 			gtaPlayerMgr::GetPlayer()->SetPlayerPed(pPlayerTarget, 1, 1);
 			PED::DELETE_PED(Old); // we've setup our new ped
 			//setup gamemode
@@ -2031,7 +2053,7 @@ public:
 			ActivateColors();
 			RequestMultiplayerMap();
 			HUD::SET_MINIMAP_HIDE_FOW(true);
-			STREAMING::SWITCH_TO_MULTI_SECONDPART(gtaPlayerMgr::GetPlayer()->GetPed());
+			STREAMING::SWITCH_TO_MULTI_SECONDPART(gtaPlayerMgr::GetPlayer()->GetPedId());
 			MISC::SET_TIME_SCALE(1.0f);
 			HUD::SET_BLIP_ALPHA(m_bStarterBlip, 0); // ooo this doesn't delete the blip but it DOES remove it from the radar & map & legend!
 			PLAYER::SIMULATE_PLAYER_INPUT_GAIT(PLAYER::PLAYER_ID(), 1.0, 3000, 1.0, 1, 1, 0); // walkoff animation triggers pretty successfully.
@@ -2132,7 +2154,7 @@ public:
 			if (PAD::IS_CONTROL_JUST_PRESSED(0, 85)) {
 				TimerStart = MISC::GET_GAME_TIMER();
 			}
-			if (MISC::GET_GAME_TIMER() > TimerStart + 100 && PAD::IS_CONTROL_PRESSED(0,85)) {
+			if (MISC::GET_GAME_TIMER() > TimerStart + 100 && PAD::IS_CONTROL_PRESSED(0, 85)) {
 				if (GRAPHICS::ANIMPOSTFX_IS_RUNNING("SwitchHudIn")) return;
 				GRAPHICS::ANIMPOSTFX_STOP_ALL();
 				GRAPHICS::ANIMPOSTFX_PLAY("SwitchHudIn", 0, 1);
@@ -2389,8 +2411,7 @@ private:
 		GRAPHICS::DRAW_MARKER(28, TranslateVector(Start), TranslateVector(legit::Vec3f{0,0,0}), TranslateVector(legit::Vec3f{0,0,0}), TranslateVector(legit::Vec3f{fRadi, fRadi, fRadi}), Col.r, Col.g, Col.b, Col.a, 0, 0, 0, 0, 0, 0, 0);
 #endif
 	}
-	static void DrawLine() {
-	}
+	static void DrawLine() {}
 	static void BoxVisual(legit::Vec3f Start, float Scale, legit::Colorf Col) {
 		GRAPHICS::DRAW_BOX(TranslateVector(Start.Subtract({Scale,Scale,Scale})), TranslateVector(Start.Add({Scale,Scale,Scale})), Col.r, Col.g, Col.b, Col.a);
 	}
@@ -2422,8 +2443,8 @@ public:
 		CPlayerSwitch::Init();
 		gtaPlayerMgr::Init();
 		legit::netLogger::Send("\n");
-		sm_pFreemodePtr = new CFreemode();
-
+		//sm_pFreemodePtr = new CFreemode();
+		CTheCreator::Init();
 		modInfof("--Mod Init End  --\n\n");
 		float fAspectRatio = GRAPHICS::GET_SCREEN_ASPECT_RATIO();
 		modInfof("Aspect Ratio: %f\n", fAspectRatio);
@@ -2431,7 +2452,8 @@ public:
 	static void Update() {
 		CPlayerSwitch::Update();
 		gtaPlayerMgr::Update();
-		sm_pFreemodePtr->Update();
+		//sm_pFreemodePtr->Update();
+		CTheCreator::Update();
 		if (IsKeyJustUp(VK_NUMPAD0)) {
 			for (const auto& a : ScriptThreadController::GetSet()) {
 				modInfof("Script %d(%s) is in Set.\n", a, SCRIPT::GET_NAME_OF_SCRIPT_WITH_THIS_ID(a));
@@ -2439,7 +2461,8 @@ public:
 		}
 	}
 	static void Shutdown() {
-		delete sm_pFreemodePtr;
+		CTheCreator::Shutdown();
+		//delete sm_pFreemodePtr;
 		gtaPlayerMgr::Shutdown();
 		CPlayerSwitch::Shutdown();
 	}

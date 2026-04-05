@@ -38,7 +38,7 @@ public:
 		CLOCK::PAUSE_CLOCK(false);
 	}
 private:
-	Time m_FrozenTime;
+	Time m_FrozenTime{};
 	bool m_bIsTimeFrozen = false;
 };
 class CWeatherController {

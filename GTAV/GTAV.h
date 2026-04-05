@@ -3,6 +3,7 @@
 #include "world/world.h"
 #include "ui/HudMgr.h"
 #include "log.h"
+#include <ModCore/thirdparty/ScriptHook/include/enums.h>
 class GTA {
 public:
 	using DeathHandler = bool(*)(void*);
@@ -18,7 +19,7 @@ public:
 		ScriptThreadController::Update();
 		CWorldMgr::Update();
 		CFader::Update();
-		if (sm_pDeathHandler && DeathHandlerArgs) {
+		if (sm_pDeathHandler) {
 			if (!HasHandledDeath) {
 				HasHandledDeath = sm_pDeathHandler(DeathHandlerArgs);
 			}

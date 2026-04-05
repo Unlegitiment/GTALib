@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 18
-VisualStudioVersion = 18.2.11415.280 d18.0
+VisualStudioVersion = 18.2.11415.280
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Main", "Main\Main.vcxproj", "{BB4CE51A-D381-411D-9CD7-70B2EF3F30D4}"
 EndProject
@@ -10,6 +10,8 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GTAV", "GTAV\GTAV.vcxproj", "{BD9EE510-7AB0-44FA-A20F-D8F81F62701D}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ModCore", "ModCore\ModCore.vcxproj", "{7D4020EA-3D4E-46BD-A074-8DB50652C48A}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "LITemplates", "E:\A_Development\Legit Engine\Main\LITemplates\LITemplates.vcxproj", "{153698DA-2AE2-418F-B56B-36A0197D74F6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -51,6 +53,14 @@ Global
 		{7D4020EA-3D4E-46BD-A074-8DB50652C48A}.Release|x64.Build.0 = Release|x64
 		{7D4020EA-3D4E-46BD-A074-8DB50652C48A}.Release|x86.ActiveCfg = Release|Win32
 		{7D4020EA-3D4E-46BD-A074-8DB50652C48A}.Release|x86.Build.0 = Release|Win32
+		{153698DA-2AE2-418F-B56B-36A0197D74F6}.Debug|x64.ActiveCfg = Debug|x64
+		{153698DA-2AE2-418F-B56B-36A0197D74F6}.Debug|x64.Build.0 = Debug|x64
+		{153698DA-2AE2-418F-B56B-36A0197D74F6}.Debug|x86.ActiveCfg = Debug|Win32
+		{153698DA-2AE2-418F-B56B-36A0197D74F6}.Debug|x86.Build.0 = Debug|Win32
+		{153698DA-2AE2-418F-B56B-36A0197D74F6}.Release|x64.ActiveCfg = Release|x64
+		{153698DA-2AE2-418F-B56B-36A0197D74F6}.Release|x64.Build.0 = Release|x64
+		{153698DA-2AE2-418F-B56B-36A0197D74F6}.Release|x86.ActiveCfg = Release|Win32
+		{153698DA-2AE2-418F-B56B-36A0197D74F6}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
